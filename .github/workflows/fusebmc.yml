@@ -31,7 +31,7 @@ jobs:
           docker run --rm \
             -v ${{ github.workspace }}:/workspace \
             ghcr.io/fusebmc/fusebmc/fusebmc:latest \
-            -a 64 -s incr -p /workspace/properties/coverage-error-call.prp /workspace/$file 
+            -a 64 -s incr -p properties/coverage-error-call.prp /workspace/$file 
         done
 
           
