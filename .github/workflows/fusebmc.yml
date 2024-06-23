@@ -26,7 +26,7 @@ jobs:
     - name: Run FuSeBMC on all C files
       run: |
         # Find all .c files in the repository
-        for file in $(find . -name '*.c'); do
+        for file in $(find . -name '*.i'); do
           # Run FuSeBMC on each file
           docker run --rm \
             -v ${{ github.workspace }}:/workspace \
