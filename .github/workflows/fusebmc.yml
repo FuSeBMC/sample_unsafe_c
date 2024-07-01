@@ -21,17 +21,17 @@ jobs:
         password: ${{ secrets.MY_GITHUB_PAT }}
 
     - name: Pull FuSeBMC Docker image
-      run: docker pull ghcr.io/fusebmc/fusebmc/fusebmc:latest
+      run: docker pull ghcr.io/fusebmc/fusebmc/fusebmc-package:latest
 
     - name: Run FuSeBMC on all C files
       run: |
         # Find all .c files in the repository
-        for file in $(find . -name '*.i'); do
+        for file in $(find . -name '*.i' -o -name '*.c'); do
           # Run FuSeBMC on each file
           docker run --rm \
             -v ${{ github.workspace }}:/workspace \
-            ghcr.io/fusebmc/fusebmc/fusebmc:latest \
-            -a 64 -s incr -p properties/coverage-error-call.prp /workspace/$file 
+            ghcr.io/fusebmc/fusebmc/fusebmc-package:latest \
+            --verification --verbose -a 64 -s incr /workspace/$file 
         done
 
           
