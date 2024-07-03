@@ -38,7 +38,7 @@ jobs:
         docker run --rm --privileged \
           -v ${{ github.workspace }}:/workspace \
           -v /tmp/fusebmc_script.sh:/fusebmc_script.sh \
-          ghcr.io/fusebmc/fusebmc-package:latest \
+          ghcr.io/fusebmc/fusebmc/fusebmc-package:latest \
           /bin/bash /fusebmc_script.sh
 
     
