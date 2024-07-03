@@ -31,10 +31,10 @@ jobs:
         # Find all .c files in the repository
         for file in $(find . -name '*.i' -o -name '*.c'); do
           # Run FuSeBMC on each file
-          docker run --rm \
+          docker run --rm --privileged \
             -v ${{ github.workspace }}:/workspace \
             ghcr.io/fusebmc/fusebmc/fusebmc-package:latest \
-            --verification --verbose -a 64 -s incr /workspace/$file 
+            /bin/bash -c "echo core >/proc/sys/kernel/core_pattern && --verification --verbose -a 64 -s incr /workspace/$file"
         done
 
           
