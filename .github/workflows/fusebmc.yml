@@ -24,7 +24,7 @@ jobs:
         password: ${{ secrets.MY_GITHUB_PAT }}
 
     - name: Pull FuSeBMC Docker image
-      run: docker pull ghcr.io/fusebmc/fusebmc/fusebmc-package:latest
+      run: docker pull ghcr.io/fusebmc/fusebmc/fusebmc/fusebmc-package:latest
 
     - name: Run FuSeBMC on all C files
       run: |
