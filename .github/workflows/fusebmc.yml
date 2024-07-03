@@ -28,14 +28,20 @@ jobs:
 
     - name: Run FuSeBMC on all C files
       run: |
-        # Find all .c files in the repository
-        for file in $(find . -name '*.i' -o -name '*.c'); do
-          # Run FuSeBMC on each file
-          docker run --rm --privileged \
-            -v ${{ github.workspace }}:/workspace \
-            ghcr.io/fusebmc/fusebmc/fusebmc-package:latest \
-            /bin/bash -c "echo core >/proc/sys/kernel/core_pattern && --verification --verbose -a 64 -s incr /workspace/$file"
-        done
+        echo '#!/bin/bash' > /tmp/fusebmc_script.sh
+        echo 'echo core >/proc/sys/kernel/core_pattern' >> /tmp/fusebmc_script.sh
+        echo 'for file in $(find /workspace -name "*.i" -o -name "*.c"); do' >> /tmp/fusebmc_script.sh
+        echo '  /entrypoint --verification --verbose -a 64 -s incr /workspace/$file' >> /tmp/fusebmc_script.sh
+        echo 'done' >> /tmp/fusebmc_script.sh
+        chmod +x /tmp/fusebmc_script.sh
+
+        docker run --rm --privileged \
+          -v ${{ github.workspace }}:/workspace \
+          -v /tmp/fusebmc_script.sh:/fusebmc_script.sh \
+          ghcr.io/fusebmc/fusebmc-package:latest \
+          /bin/bash /fusebmc_script.sh
+
+    
 
           
 
