@@ -22,14 +22,14 @@ jobs:
           password: ${{ secrets.MY_GITHUB_PAT }}
 
       - name: Pull FuSeBMC Docker image
-        run: docker pull ghcr.io/fusebmc/fusebmc/fusebmc-package:latest
+        run: docker pull ghcr.io/fusebmc/fusebmc-ai:build_system
 
       - name: Run privileged command
         run: |
           docker run --rm --privileged \
           -v /proc:/host/proc \
           --entrypoint /bin/sh \
-          ghcr.io/fusebmc/fusebmc/fusebmc-package:latest \
+          ghcr.io/fusebmc/fusebmc-ai:build_system \
           -c "echo core > /host/proc/sys/kernel/core_pattern"
 
       - name: Run FuSeBMC on all C files
@@ -39,6 +39,6 @@ jobs:
             # Run FuSeBMC on each file
             docker run --rm \
             -v ${{ github.workspace }}:/workspace \
-            ghcr.io/fusebmc/fusebmc/fusebmc-package:latest \
+            ghcr.io/fusebmc/fusebmc-ai:build-system \
             --verification --verbose -a 64 -s incr /workspace/$file
           done
