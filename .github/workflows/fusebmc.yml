@@ -43,7 +43,7 @@ jobs:
             # Run FuSeBMC on each file
             docker run --rm \
             -v ${{ github.workspace }}:/workspace \
-            ghcr.io/fusebmc/fusebmc-ai:build-system \
+            ghcr.io/fusebmc/fusebmc-ai:build_system \
             -c "./fusebmc.bin --ai --verification --verbose -a 64 -s incr /workspace/$file"
           done
 
