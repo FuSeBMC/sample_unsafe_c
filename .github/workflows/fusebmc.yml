@@ -32,6 +32,10 @@ jobs:
           ghcr.io/fusebmc/fusebmc-ai:build_system \
           -c "echo core > /host/proc/sys/kernel/core_pattern"
 
+      - name: Check all available docker images
+        run: |
+          docker images
+
       - name: Run FuSeBMC on all C files
         run: |
           # Find all .c files in the repository
