@@ -19,7 +19,7 @@ void formatStringVulnerability() {
 
 void integerOverflow() {
     unsigned int a, b, result;
-    printf("Enter two numbers: ");
+    printf("Enter two numbers please: ");
     scanf("%u %u", &a, &b);
     result = a + b;
     printf("The result is: %u\n", result);
