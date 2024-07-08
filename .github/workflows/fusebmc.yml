@@ -32,19 +32,21 @@ jobs:
           ghcr.io/fusebmc/fusebmc-ai:build_system \
           -c "echo core > /host/proc/sys/kernel/core_pattern"
 
-      - name: Check all available docker images
+      - name: Run FuSeBMC on changed C files
         run: |
-          docker images
+          changed_files=$(git diff --name-only HEAD^ HEAD | grep -E '\.c$|\.i$')
+          
+          if [ -z "$changed_files" ]; then
+            echo "No .c or .i files have been changed. Exiting."
+            exit 0
+          fi
 
-      - name: Run FuSeBMC on all C files
-        run: |
-          # Find all .c files in the repository
-          for file in $(find . -name '*.i' -o -name '*.c'); do
-            # Run FuSeBMC on each file
+          for file in $changed_files; do
+            echo "Running FuSeBMC on $file"
             docker run --rm \
-            -v ${{ github.workspace }}:/workspace \
-            ghcr.io/fusebmc/fusebmc-ai:build_system \
-            --ai --verification -a 64 -s incr /workspace/$file
+              -v ${{ github.workspace }}:/workspace \
+              ghcr.io/fusebmc/fusebmc-ai:build_system \
+              --ai --verification -a 64 -s incr /workspace/$file
           done
 
           
