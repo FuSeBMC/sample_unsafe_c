@@ -11,7 +11,7 @@ void bufferOverflow() {
 
 void formatStringVulnerability() {
     char userInput[100];
-    printf("Enter a string: ");
+    printf("Enter a string please: ");
     scanf("%s", userInput);
     printf(userInput);
     printf("\n");
