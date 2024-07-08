@@ -11,7 +11,7 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v2
       with:
-        fetch-depth: 0  # Fetch all history for all branches and tags
+        fetch-depth: 0  
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v1
@@ -34,10 +34,6 @@ jobs:
         ghcr.io/fusebmc/fusebmc-ai:build_system \
         -c "echo core > /host/proc/sys/kernel/core_pattern"
 
-    - name: Check all available docker images
-      run: |
-        docker images
-
     - name: Get changed files
       id: changed-files
       run: |
@@ -59,16 +55,61 @@ jobs:
       run: |
         if [ -z "${{ steps.changed-files.outputs.files }}" ]; then
           echo "No .c or .i files were changed."
+          echo "## FuSeBMC Analysis Results" > results.md
+          echo "No .c or .i files were changed." >> results.md
         else
+          echo "## FuSeBMC Analysis Results" > results.md
+          echo "### Summary" >> results.md
+          echo "| File | Status | Issues |" >> results.md
+          echo "|------|--------|--------|" >> results.md
           for file in ${{ steps.changed-files.outputs.files }}; do
             if [ -f "$file" ]; then
               echo "Processing file: $file"
-              docker run --rm \
+              echo "### Results for $file" >> results.md
+              output=$(docker run --rm \
                 -v ${{ github.workspace }}:/workspace \
                 ghcr.io/fusebmc/fusebmc-ai:build_system \
-                --ai --verification -a 64 -s incr /workspace/$file
+                --ai --verification -a 64 -s incr /workspace/$file)
+              echo '```' >> results.md
+              echo "$output" >> results.md
+              echo '```' >> results.md
+              
+              # Analyze output to determine if pipeline fails
+              if echo "$output" | grep -q "VERIFICATION FAILED"; then
+                echo "::error::Verification failed for $file"
+                echo "❌ Verification failed" >> results.md
+                echo "Bugs found:" >> results.md
+                echo "$output" | sed -n '/\[Counterexample\]/,/VERIFICATION FAILED/p' >> results.md
+                echo "| $file | ❌ Failed | Yes |" >> results.md
+                
+                # Extract and include corrected code in report
+                corrected_code=$(echo "$output" | sed -n '/FuSeBMC-AI: Here is the corrected code, verified with ESBMC:/,/FuSeBMC-AI:/p' | sed '1d;$d')
+                if [ ! -z "$corrected_code" ]; then
+                  echo "#### Corrected Code Recommendation" >> results.md
+                  echo '```c' >> results.md
+                  echo "$corrected_code" >> results.md
+                  echo '```' >> results.md
+                fi
+              elif echo "$output" | grep -q "VERIFICATION SUCCESSFUL"; then
+                echo "✅ Verification passed" >> results.md
+                echo "| $file | ✅ Passed | No |" >> results.md
+              else
+                echo "⚠️ Verification result unclear" >> results.md
+                echo "| $file | ⚠️ Unclear | Unknown |" >> results.md
+              fi
+              echo "" >> results.md
             fi
           done
         fi
 
-          
+    - name: Check for failures
+      run: |
+        if grep -q "VERIFICATION FAILED" results.md; then
+          exit 1
+        fi
+
+    - name: Upload results
+      uses: actions/upload-artifact@v2
+      with:
+        name: fusebmc-results
+        path: results.md
