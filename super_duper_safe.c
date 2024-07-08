@@ -5,13 +5,13 @@ int main() {
 
     printf("Enter the first integer: ");
     if (scanf("%d", &num1) != 1) {
-        printf("Invalid input, enter an integer.\n");
+        printf("Invalid input, please enter an integer.\n");
         return 1;
     }
 
     printf("Enter the second integer: ");
     if (scanf("%d", &num2) != 1) {
-        printf("Invalid input, enter an integer.\n");
+        printf("Invalid input, please enter an integer.\n");
         return 1;
     }
 
