@@ -34,7 +34,7 @@ jobs:
 
       - name: Run FuSeBMC on changed C files
         run: |
-          changed_files=$(git diff --name-only HEAD^ HEAD | grep -E '\.c$|\.i$')
+          changed_files=$(git diff --name-only HEAD~1 | grep -E '\.c$|\.i$')
           
           if [ -z "$changed_files" ]; then
             echo "No .c or .i files have been changed. Exiting."
