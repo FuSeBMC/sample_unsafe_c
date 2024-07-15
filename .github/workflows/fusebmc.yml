@@ -60,42 +60,40 @@ jobs:
         else
           echo "## FuSeBMC Analysis Results" > results.md
           echo "### Summary" >> results.md
-          echo "| File | Status | Issues |" >> results.md
-          echo "|------|--------|--------|" >> results.md
+          echo "| File | Status |" >> results.md
+          echo "|------|--------|" >> results.md
           for file in ${{ steps.changed-files.outputs.files }}; do
             if [ -f "$file" ]; then
               echo "Processing file: $file"
-              echo "### Results for $file" >> results.md
               output=$(docker run --rm \
                 -v ${{ github.workspace }}:/workspace \
                 ghcr.io/fusebmc/fusebmc-ai:build_system \
                 --ai --verification -a 64 -s incr /workspace/$file)
-              echo '```' >> results.md
-              echo "$output" >> results.md
-              echo '```' >> results.md
               
-              # Analyze output to determine if pipeline fails
               if echo "$output" | grep -q "VERIFICATION FAILED"; then
-                echo "::error::Verification failed for $file"
-                echo "❌ Verification failed" >> results.md
-                echo "Bugs found:" >> results.md
-                echo "$output" | sed -n '/\[Counterexample\]/,/VERIFICATION FAILED/p' >> results.md
-                echo "| $file | ❌ Failed | Yes |" >> results.md
-                
-                # Extract and include corrected code in report
-                corrected_code=$(echo "$output" | sed -n '/FuSeBMC-AI: Here is the corrected code, verified with ESBMC:/,/FuSeBMC-AI:/p' | sed '1d;$d')
-                if [ ! -z "$corrected_code" ]; then
-                  echo "#### Corrected Code Recommendation" >> results.md
-                  echo '```c' >> results.md
-                  echo "$corrected_code" >> results.md
-                  echo '```' >> results.md
-                fi
+                echo "| $file | ❌ Failed |" >> results.md
+                status="failed"
               elif echo "$output" | grep -q "VERIFICATION SUCCESSFUL"; then
-                echo "✅ Verification passed" >> results.md
-                echo "| $file | ✅ Passed | No |" >> results.md
+                echo "| $file | ✅ Passed |" >> results.md
+                status="passed"
               else
-                echo "⚠️ Verification result unclear" >> results.md
-                echo "| $file | ⚠️ Unclear | Unknown |" >> results.md
+                echo "| $file | ⚠️ Unclear |" >> results.md
+                status="unclear"
+              fi
+              
+              echo "" >> results.md
+              echo "### $file" >> results.md
+              if [ "$status" = "failed" ]; then
+                echo "#### Violated Properties:" >> results.md
+                echo "$output" | sed -n '/Violated property:/,/VERIFICATION FAILED/p' >> results.md
+              fi
+              
+              corrected_code=$(echo "$output" | sed -n '/FuSeBMC-AI: Here is the corrected code, verified with ESBMC:/,/```/p' | sed '1d;$d')
+              if [ ! -z "$corrected_code" ]; then
+                echo "#### Corrected Code (Verified by ESBMC)" >> results.md
+                echo '```c' >> results.md
+                echo "$corrected_code" >> results.md
+                echo '```' >> results.md
               fi
               echo "" >> results.md
             fi
