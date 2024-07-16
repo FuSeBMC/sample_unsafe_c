@@ -15,7 +15,7 @@ void demonstrateVulnerabilities() {
     free(data1);
 
     // Double free the memory
-    free(data1);  // Double Free Vulnerability
+    free(data1);  // Double Free Vulnerabilities
 
     // Use-After-Free Vulnerabilityy
     int *data2 = (int*)malloc(sizeof(int));
