@@ -52,16 +52,19 @@ jobs:
         echo "::set-output name=files::$changed_files"
 
     - name: Run FuSeBMC on changed C files
+      id: fusebmc-analysis
       run: |
         if [ -z "${{ steps.changed-files.outputs.files }}" ]; then
           echo "No .c or .i files were changed."
           echo "## FuSeBMC Analysis Results" > results.md
           echo "No .c or .i files were changed." >> results.md
+          echo "::set-output name=changes_detected::false"
         else
           echo "## FuSeBMC Analysis Results" > results.md
           echo "### Summary" >> results.md
           echo "| File | Status |" >> results.md
           echo "|------|--------|" >> results.md
+          errors_found=false
           for file in ${{ steps.changed-files.outputs.files }}; do
             if [ -f "$file" ]; then
               echo "Processing file: $file"
@@ -73,6 +76,7 @@ jobs:
               if echo "$output" | grep -q "VERIFICATION FAILED"; then
                 echo "| $file | ❌ Failed |" >> results.md
                 status="failed"
+                errors_found=true
               elif echo "$output" | grep -q "VERIFICATION SUCCESSFUL"; then
                 echo "| $file | ✅ Passed |" >> results.md
                 status="passed"
@@ -90,50 +94,37 @@ jobs:
               
               corrected_code=$(echo "$output" | sed -n '/FuSeBMC-AI: Here is the corrected code, verified with ESBMC:/,/```/p' | sed '1d;$d')
               if [ ! -z "$corrected_code" ]; then
-                echo "#### Corrected Code (Verified by ESBMC)" >> results.md
+                echo "#### Corrected Code (Suggested by FuSeBMC)" >> results.md
                 echo '```c' >> results.md
                 echo "$corrected_code" >> results.md
                 echo '```' >> results.md
-                
-                # Create a temporary file with corrected code
-                echo "$corrected_code" > corrected_temp.c
-                
-                # Compare original and corrected files, add comments
-                line_number=1
-                while IFS= read -r original_line && IFS= read -r corrected_line <&3; do
-                  if [ "$original_line" != "$corrected_line" ]; then
-                    sed -i "${line_number}s|$|  // Corrected: $corrected_line|" "$file"
-                  fi
-                  ((line_number++))
-                done < "$file" 3< corrected_temp.c
-                
-                # Remove temporary file
-                rm corrected_temp.c
+                echo "$corrected_code" > "$file"
               fi
               echo "" >> results.md
             fi
           done
+          echo "::set-output name=changes_detected::true"
+          echo "::set-output name=errors_found::$errors_found"
         fi
 
     - name: Create Pull Request
+      if: steps.fusebmc-analysis.outputs.changes_detected == 'true'
       uses: peter-evans/create-pull-request@v6
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        commit-message: Apply FuSeBMC corrections as comments
-        title: '[FuSeBMC] Apply automated corrections as comments'
+        commit-message: Apply FuSeBMC corrections
+        title: '[FuSeBMC] Apply suggested corrections'
         body: |
-          This pull request adds FuSeBMC suggested corrections as comments next to the original code lines.
+          This pull request applies corrections suggested by FuSeBMC analysis.
           
-          Please review the changes carefully before merging. You may want to apply these comments manually to fix the issues.
-        branch: fusebmc-corrections-comments
+          Please review the changes carefully before merging.
+        branch: fusebmc-suggested-corrections
         delete-branch: true
         base: ${{ github.ref }}
 
     - name: Check for failures
-      run: |
-        if grep -q "VERIFICATION FAILED" results.md; then
-          exit 1
-        fi
+      if: steps.fusebmc-analysis.outputs.errors_found == 'true'
+      run: exit 1
 
     - name: Upload results
       if: always()
