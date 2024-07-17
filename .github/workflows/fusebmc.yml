@@ -39,7 +39,7 @@ jobs:
         if [ "${{ github.event_name }}" == "pull_request" ]; then
           git fetch origin ${{ github.base_ref }}
           changed_files=$(git diff --name-only --diff-filter=ACMRT origin/${{ github.base_ref }} ${{ github.sha }} | grep -E '\.c$|\.i$' || true)
-        elif [ "${{ github.event_name }}" == "push"; then
+        elif [ "${{ github.event_name }}" == "push" ]; then
           if git rev-parse --verify HEAD^1 >/dev/null 2>&1; then
             changed_files=$(git diff --name-only --diff-filter=ACMRT HEAD^1 HEAD | grep -E '\.c$|\.i$' || true)
           else
@@ -116,6 +116,23 @@ jobs:
             echo "" >> results.md
           fi
         done
+        echo "vulnerabilities_found=$vulnerabilities_found" >> $GITHUB_OUTPUT
+        cat results.md
+
+    - name: Create Pull Request
+      if: steps.fusebmc-analysis.outputs.vulnerabilities_found == 'true'
+      uses: peter-evans/create-pull-request@v6
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        commit-message: Apply FuSeBMC suggestions
+        title: '[FuSeBMC] Apply suggested corrections'
+        body: |
+          This pull request applies suggestions from FuSeBMC analysis.
+          
+          Please review the changes carefully before merging.
+        branch: fusebmc-suggested-corrections
+        delete-branch: true
+        base: ${{ github.ref_name }}
 
     - name: Upload results
       if: always()
@@ -124,22 +141,7 @@ jobs:
         name: fusebmc-results
         path: results.md
 
-    - name: Create Pull Request
-      if: steps.fusebmc-analysis.outputs.vulnerabilities_found == 'true'
-      uses: peter-evans/create-pull-request@v6
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        commit-message: Apply FuSeBMC corrections
-        title: '[FuSeBMC] Apply suggested corrections'
-        body: |
-          This pull request applies corrections suggested by FuSeBMC analysis.
-          
-          Please review the changes carefully before merging.
-        branch: fusebmc-suggested-corrections
-        delete-branch: true
-        base: ${{ github.ref_name }}
-
-    - name: Check for vulnerabilities
+    - name: Fail if vulnerabilities found
       if: steps.fusebmc-analysis.outputs.vulnerabilities_found == 'true'
       run: |
         echo "Vulnerabilities were found. Pipeline failed."
