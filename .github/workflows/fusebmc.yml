@@ -39,7 +39,7 @@ jobs:
         if [ "${{ github.event_name }}" == "pull_request" ]; then
           git fetch origin ${{ github.base_ref }}
           changed_files=$(git diff --name-only --diff-filter=ACMRT origin/${{ github.base_ref }} ${{ github.sha }} | grep -E '\.c$|\.i$' || true)
-        elif [ "${{ github.event_name }}" == "push" ]; then
+        elif [ "${{ github.event_name }}" == "push"; then
           if git rev-parse --verify HEAD^1 >/dev/null 2>&1; then
             changed_files=$(git diff --name-only --diff-filter=ACMRT HEAD^1 HEAD | grep -E '\.c$|\.i$' || true)
           else
@@ -85,10 +85,6 @@ jobs:
               echo "#### Violated Properties:" >> results.md
               echo "$output" | sed -n '/Violated property:/,/VERIFICATION FAILED/p' >> results.md
             fi
-            
-           for file in ${{ steps.changed-files.outputs.files }}; do
-          if [ -f "$file" ]; then
-            # ... (previous code remains the same)
             
             corrected_code=$(echo "$output" | sed -n '/FuSeBMC-AI: Here is the corrected code, verified with ESBMC:/,/```/p' | sed '1d;$d')
             if [ ! -z "$corrected_code" ]; then
