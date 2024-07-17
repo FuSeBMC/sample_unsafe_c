@@ -86,19 +86,47 @@ jobs:
               echo "$output" | sed -n '/Violated property:/,/VERIFICATION FAILED/p' >> results.md
             fi
             
+           for file in ${{ steps.changed-files.outputs.files }}; do
+          if [ -f "$file" ]; then
+            # ... (previous code remains the same)
+            
             corrected_code=$(echo "$output" | sed -n '/FuSeBMC-AI: Here is the corrected code, verified with ESBMC:/,/```/p' | sed '1d;$d')
             if [ ! -z "$corrected_code" ]; then
-              echo "#### Corrected Code (Suggested by FuSeBMC)" >> results.md
-              echo '```c' >> results.md
-              echo "$corrected_code" >> results.md
+              echo "#### FuSeBMC Suggestions" >> results.md
+              echo '```diff' >> results.md
+              
+              # Create a diff and add it to results.md
+              diff -u <(echo "$(<$file)") <(echo "$corrected_code") | tail -n +3 >> results.md
+              
               echo '```' >> results.md
-              echo "$corrected_code" > "$file"
+              
+              # Apply suggestions as comments in the original file
+              original_lines=()
+              while IFS= read -r line; do
+                original_lines+=("$line")
+              done < "$file"
+              
+              corrected_lines=()
+              while IFS= read -r line; do
+                corrected_lines+=("$line")
+              done <<< "$corrected_code"
+              
+              for i in "${!original_lines[@]}"; do
+                if [ "${original_lines[$i]}" != "${corrected_lines[$i]}" ]; then
+                  sed -i "${i}s|$|  // FuSeBMC suggestion: ${corrected_lines[$i]}|" "$file"
+                fi
+              done
             fi
             echo "" >> results.md
           fi
         done
-        echo "vulnerabilities_found=$vulnerabilities_found" >> $GITHUB_OUTPUT
-        cat results.md
+
+    - name: Upload results
+      if: always()
+      uses: actions/upload-artifact@v2
+      with:
+        name: fusebmc-results
+        path: results.md
 
     - name: Create Pull Request
       if: steps.fusebmc-analysis.outputs.vulnerabilities_found == 'true'
@@ -114,13 +142,6 @@ jobs:
         branch: fusebmc-suggested-corrections
         delete-branch: true
         base: ${{ github.ref_name }}
-
-    - name: Upload results
-      if: always()
-      uses: actions/upload-artifact@v2
-      with:
-        name: fusebmc-results
-        path: results.md
 
     - name: Check for vulnerabilities
       if: steps.fusebmc-analysis.outputs.vulnerabilities_found == 'true'
