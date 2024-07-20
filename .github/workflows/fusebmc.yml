@@ -88,25 +88,31 @@ jobs:
             
             corrected_code=$(echo "$output" | sed -n '/FuSeBMC-AI: Here is the corrected code, verified with ESBMC:/,/```/p' | sed '1d;$d')
             if [ ! -z "$corrected_code" ]; then
-              # Create a temporary file with the corrected code
+              # Save the corrected code as a separate artifact
               echo "$corrected_code" > "${file}.corrected"
               
-              # Generate diff and apply it to the original file
-              diff -u "$file" "${file}.corrected" | sed 's/^-/\/\/ -/' | sed 's/^+/\/\/ +/' > "${file}.diff"
-              cat "${file}.diff" "$file" > "${file}.new"
-              mv "${file}.new" "$file"
+              # Generate inline comments for the PR
+              awk '{print "// FuSeBMC suggestion: " $0}' "${file}.corrected" > "${file}.suggestions"
+              
+              # Apply suggestions as inline comments in the original file
+              line_number=1
+              while IFS= read -r suggestion && IFS= read -r original <&3; do
+                if [ "$suggestion" != "// FuSeBMC suggestion: $original" ]; then
+                  sed -i "${line_number}s|$|  $suggestion|" "$file"
+                fi
+                ((line_number++))
+              done < "${file}.suggestions" 3< "$file"
               
               # Clean up temporary files
-              rm "${file}.corrected" "${file}.diff"
+              rm "${file}.suggestions"
               
               echo "#### FuSeBMC Suggestions" >> results.md
-              echo "Suggestions have been added as comments in the file." >> results.md
+              echo "Suggestions have been added as inline comments in the file." >> results.md
             fi
             echo "" >> results.md
           fi
         done
         echo "vulnerabilities_found=$vulnerabilities_found" >> $GITHUB_OUTPUT
-        cat results.md
 
     - name: Create Pull Request
       if: steps.fusebmc-analysis.outputs.vulnerabilities_found == 'true'
@@ -117,7 +123,7 @@ jobs:
         title: '[FuSeBMC] Apply suggested corrections'
         body: |
           This pull request applies suggestions from FuSeBMC analysis.
-          The suggestions are added as comments in the relevant files.
+          The suggestions are added as inline comments in the relevant files.
           
           Please review the changes carefully before merging.
         branch: fusebmc-suggested-corrections
@@ -129,7 +135,9 @@ jobs:
       uses: actions/upload-artifact@v2
       with:
         name: fusebmc-results
-        path: results.md
+        path: |
+          results.md
+          *.corrected
 
     - name: Fail if vulnerabilities found
       if: steps.fusebmc-analysis.outputs.vulnerabilities_found == 'true'
