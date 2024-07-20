@@ -14,7 +14,6 @@ void demonstrateVulnerabilities() {
 
     free(data1);
 
-    // Double free the memory
     free(data1);  // Double Free Vulnerabilities
 
     // Use-After-Free Vulnerabilityy
