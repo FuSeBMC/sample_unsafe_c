@@ -1,0 +1,40 @@
+
+
+
+#include <stdio.h>
+#include <stdlib.h>
+
+void demonstrateVulnerabilities() {
+    // Corrected Double Free Vulnerability
+    int *data1 = (int*)malloc(sizeof(int));
+    if (data1 == NULL) {
+        printf("Memory allocation failed\n");
+        return;
+    }
+
+    *data1 = 42;
+    printf("Data1 value: %d\n", *data1);
+
+    free(data1);
+
+    // Prevent the double free by nullifying the pointer after freeing
+    data1 = NULL;
+
+    // Use-After-Free Vulnerability corrected by removing the usage after free
+    int *data2 = (int*)malloc(sizeof(int));
+    if (data2 == NULL) {
+        printf("Memory allocation failed, boo hoo\n");
+        return;
+    }
+
+    *data2 = 100;
+    printf("Data2 value: %d\n", *data2);
+
+    free(data2);
+
+    // Removed the use of data2 after it has been freed to fix the Use-After-Free Vulnerability
+}
+
+int main() {
+    demonstrateVulnerabilities();
+    return 0;
