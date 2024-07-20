@@ -7,11 +7,14 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
     - name: Checkout code
       uses: actions/checkout@v2
       with:
-        fetch-depth: 0  
+        fetch-depth: 0
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v1
@@ -28,11 +31,7 @@ jobs:
 
     - name: Run privileged command
       run: |
-        docker run --rm --privileged \
-        -v /proc:/host/proc \
-        --entrypoint /bin/sh \
-        ghcr.io/fusebmc/fusebmc-ai:build_system \
-        -c "echo core > /host/proc/sys/kernel/core_pattern"
+        sudo sh -c 'echo core > /proc/sys/kernel/core_pattern'
 
     - name: Get changed files
       id: changed-files
@@ -49,66 +48,99 @@ jobs:
         else
           changed_files=$(git ls-tree -r --name-only HEAD | grep -E '\.c$|\.i$' || true)
         fi
-        echo "::set-output name=files::$changed_files"
+        echo "Changed files: $changed_files"
+        echo "files=$changed_files" >> $GITHUB_OUTPUT
 
     - name: Run FuSeBMC on changed C files
+      id: fusebmc-analysis
       run: |
-        if [ -z "${{ steps.changed-files.outputs.files }}" ]; then
-          echo "No .c or .i files were changed."
-          echo "## FuSeBMC Analysis Results" > results.md
-          echo "No .c or .i files were changed." >> results.md
-        else
-          echo "## FuSeBMC Analysis Results" > results.md
-          echo "### Summary" >> results.md
-          echo "| File | Status |" >> results.md
-          echo "|------|--------|" >> results.md
-          for file in ${{ steps.changed-files.outputs.files }}; do
-            if [ -f "$file" ]; then
-              echo "Processing file: $file"
-              output=$(docker run --rm \
-                -v ${{ github.workspace }}:/workspace \
-                ghcr.io/fusebmc/fusebmc-ai:build_system \
-                --ai --verification -a 64 -s incr /workspace/$file)
-              
-              if echo "$output" | grep -q "VERIFICATION FAILED"; then
-                echo "| $file | ❌ Failed |" >> results.md
-                status="failed"
-              elif echo "$output" | grep -q "VERIFICATION SUCCESSFUL"; then
-                echo "| $file | ✅ Passed |" >> results.md
-                status="passed"
-              else
-                echo "| $file | ⚠️ Unclear |" >> results.md
-                status="unclear"
-              fi
-              
-              echo "" >> results.md
-              echo "### $file" >> results.md
-              if [ "$status" = "failed" ]; then
-                echo "#### Violated Properties:" >> results.md
-                echo "$output" | sed -n '/Violated property:/,/VERIFICATION FAILED/p' >> results.md
-              fi
-              
-              corrected_code=$(echo "$output" | sed -n '/FuSeBMC-AI: Here is the corrected code, verified with ESBMC:/,/```/p' | sed '1d;$d')
-              if [ ! -z "$corrected_code" ]; then
-                echo "#### Corrected Code (Verified by ESBMC)" >> results.md
-                echo '```c' >> results.md
-                echo "$corrected_code" >> results.md
-                echo '```' >> results.md
-              fi
-              echo "" >> results.md
+        echo "## FuSeBMC Analysis Results" > results.md
+        echo "### Summary" >> results.md
+        echo "| File | Status |" >> results.md
+        echo "|------|--------|" >> results.md
+        vulnerabilities_found=false
+        for file in ${{ steps.changed-files.outputs.files }}; do
+          if [ -f "$file" ]; then
+            echo "Processing file: $file"
+            output=$(docker run --rm \
+              -v ${{ github.workspace }}:/workspace \
+              ghcr.io/fusebmc/fusebmc-ai:build_system \
+              --ai --verification -a 64 -s incr /workspace/$file)
+            
+            if echo "$output" | grep -q "VERIFICATION FAILED"; then
+              echo "| $file | ❌ Failed |" >> results.md
+              status="failed"
+              vulnerabilities_found=true
+            elif echo "$output" | grep -q "VERIFICATION SUCCESSFUL"; then
+              echo "| $file | ✅ Passed |" >> results.md
+              status="passed"
+            else
+              echo "| $file | ⚠️ Unclear |" >> results.md
+              status="unclear"
             fi
-          done
-        fi
+            
+            echo "" >> results.md
+            echo "### $file" >> results.md
+            if [ "$status" = "failed" ]; then
+              echo "#### Violated Properties:" >> results.md
+              echo "$output" | sed -n '/Violated property:/,/VERIFICATION FAILED/p' >> results.md
+            fi
+            
+            corrected_code=$(echo "$output" | sed -n '/FuSeBMC-AI: Here is the corrected code, verified with ESBMC:/,/```/p' | sed '1d;$d')
+            if [ ! -z "$corrected_code" ]; then
+              # Save the corrected code as a separate artifact
+              echo "$corrected_code" > "${file}.corrected"
+              
+              # Generate inline comments for the PR
+              awk '{print "// FuSeBMC suggestion: " $0}' "${file}.corrected" > "${file}.suggestions"
+              
+              # Apply suggestions as inline comments in the original file
+              line_number=1
+              while IFS= read -r suggestion && IFS= read -r original <&3; do
+                if [ "$suggestion" != "// FuSeBMC suggestion: $original" ]; then
+                  sed -i "${line_number}s|$|  $suggestion|" "$file"
+                fi
+                ((line_number++))
+              done < "${file}.suggestions" 3< "$file"
+              
+              # Clean up temporary files
+              rm "${file}.suggestions"
+              
+              echo "#### FuSeBMC Suggestions" >> results.md
+              echo "Suggestions have been added as inline comments in the file." >> results.md
+            fi
+            echo "" >> results.md
+          fi
+        done
+        echo "vulnerabilities_found=$vulnerabilities_found" >> $GITHUB_OUTPUT
 
-    - name: Check for failures
-      run: |
-        if grep -q "VERIFICATION FAILED" results.md; then
-          exit 1
-        fi
+    - name: Create Pull Request
+      if: steps.fusebmc-analysis.outputs.vulnerabilities_found == 'true'
+      uses: peter-evans/create-pull-request@v6
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        commit-message: Apply FuSeBMC suggestions
+        title: '[FuSeBMC] Apply suggested corrections'
+        body: |
+          This pull request applies suggestions from FuSeBMC analysis.
+          The suggestions are added as inline comments in the relevant files.
+          
+          Please review the changes carefully before merging.
+        branch: fusebmc-suggested-corrections
+        delete-branch: true
+        base: ${{ github.ref_name }}
 
     - name: Upload results
       if: always()
       uses: actions/upload-artifact@v2
       with:
         name: fusebmc-results
-        path: results.md
+        path: |
+          results.md
+          *.corrected
+
+    - name: Fail if vulnerabilities found
+      if: steps.fusebmc-analysis.outputs.vulnerabilities_found == 'true'
+      run: |
+        echo "Vulnerabilities were found. Pipeline failed."
+        exit 1
