@@ -2,7 +2,7 @@
 #include <stdlib.h>
 
 void demonstrateVulnerabilities() {
-    // Double Free Vulnerability
+    // Double Free Vulnerabilityy
     int *data1 = (int*)malloc(sizeof(int));
     if (data1 == NULL) {
         printf("Memory allocation failed\n");
