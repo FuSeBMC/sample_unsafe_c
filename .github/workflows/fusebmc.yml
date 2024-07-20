@@ -88,30 +88,19 @@ jobs:
             
             corrected_code=$(echo "$output" | sed -n '/FuSeBMC-AI: Here is the corrected code, verified with ESBMC:/,/```/p' | sed '1d;$d')
             if [ ! -z "$corrected_code" ]; then
+              # Create a temporary file with the corrected code
+              echo "$corrected_code" > "${file}.corrected"
+              
+              # Generate diff and apply it to the original file
+              diff -u "$file" "${file}.corrected" | sed 's/^-/\/\/ -/' | sed 's/^+/\/\/ +/' > "${file}.diff"
+              cat "${file}.diff" "$file" > "${file}.new"
+              mv "${file}.new" "$file"
+              
+              # Clean up temporary files
+              rm "${file}.corrected" "${file}.diff"
+              
               echo "#### FuSeBMC Suggestions" >> results.md
-              echo '```diff' >> results.md
-              
-              # Create a diff and add it to results.md
-              diff -u <(echo "$(<$file)") <(echo "$corrected_code") | tail -n +3 >> results.md
-              
-              echo '```' >> results.md
-              
-              # Apply suggestions as comments in the original file
-              original_lines=()
-              while IFS= read -r line; do
-                original_lines+=("$line")
-              done < "$file"
-              
-              corrected_lines=()
-              while IFS= read -r line; do
-                corrected_lines+=("$line")
-              done <<< "$corrected_code"
-              
-              for i in "${!original_lines[@]}"; do
-                if [ "${original_lines[$i]}" != "${corrected_lines[$i]}" ]; then
-                  sed -i "${i}s|$|  // FuSeBMC suggestion: ${corrected_lines[$i]}|" "$file"
-                fi
-              done
+              echo "Suggestions have been added as comments in the file." >> results.md
             fi
             echo "" >> results.md
           fi
@@ -128,6 +117,7 @@ jobs:
         title: '[FuSeBMC] Apply suggested corrections'
         body: |
           This pull request applies suggestions from FuSeBMC analysis.
+          The suggestions are added as comments in the relevant files.
           
           Please review the changes carefully before merging.
         branch: fusebmc-suggested-corrections
