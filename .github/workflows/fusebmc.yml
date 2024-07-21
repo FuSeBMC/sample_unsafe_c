@@ -101,6 +101,13 @@ jobs:
         done
         echo "vulnerabilities_found=$vulnerabilities_found" >> $GITHUB_OUTPUT
 
+    - name: Upload results
+      if: always()
+      uses: actions/upload-artifact@v2
+      with:
+        name: fusebmc-results
+        path: results.md
+
     - name: Create Pull Request
       if: steps.fusebmc-analysis.outputs.vulnerabilities_found == 'true'
       uses: peter-evans/create-pull-request@v6
@@ -116,13 +123,6 @@ jobs:
         branch: fusebmc-corrections
         delete-branch: true
         base: ${{ github.ref_name }}
-
-    - name: Upload results
-      if: always()
-      uses: actions/upload-artifact@v2
-      with:
-        name: fusebmc-results
-        path: results.md
 
     - name: Fail if vulnerabilities found
       if: steps.fusebmc-analysis.outputs.vulnerabilities_found == 'true'
