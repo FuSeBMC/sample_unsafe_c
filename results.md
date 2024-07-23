@@ -1,3 +1,21 @@
+## FuSeBMC Analysis Results
+### Summary
+| File | Status |
+|------|--------|
+| unsafe_mem.c | ❌ Failed |
+
+### unsafe_mem.c
+#### Violated Properties:
+Violated property:
+  file unsafe_mem.c line 17 column 5 function demonstrateVulnerabilities
+  dereference failure: invalidated dynamic object freed
+VERIFICATION FAILED
+Violated property:
+  file unsafe_mem.c line 17 column 5 function demonstrateVulnerabilities
+  dereference failure: invalidated dynamic object freed
+VERIFICATION FAILED
+#### Corrected Code:
+```c
 
 
 
@@ -39,3 +57,5 @@ void demonstrateVulnerabilities() {
 int main() {
     demonstrateVulnerabilities();
     return 0;
+```
+
