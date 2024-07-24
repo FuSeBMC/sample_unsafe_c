@@ -1,4 +1,5 @@
 name: FuSeBMC Analysis
+
 on:
   push:
   pull_request:
@@ -66,28 +67,28 @@ jobs:
               -v ${{ github.workspace }}:/workspace \
               ghcr.io/fusebmc/fusebmc-ai:build_system \
               --ai --verification -a 64 -s incr /workspace/$file)
-            
-            if echo "$output" | grep -q "VERIFICATION FAILED"; then
+
+            # Extract the output directory suffix from the logs
+            file_base=$(basename "$file")
+            output_suffix=$(echo "$output" | grep -oP "(?<=fusebmc_output/${file_base}_)[^/]+")
+
+            if [ -z "$output_suffix" ]; then
+              echo "Could not find the output directory suffix in the logs."
+              exit 1
+            fi
+
+            output_dir="fusebmc_output/${file_base}_${output_suffix}"
+            solution_file="$output_dir/solution/correct.c"
+
+            # Extract corrected code
+            docker cp $(docker ps -lq):/workspace/$solution_file ./corrected_code/$file_base
+            if [ -f "./corrected_code/$file_base" ]; then
+              corrected_code=$(cat "./corrected_code/$file_base")
               echo "| $file | ❌ Failed |" >> results.md
-              status="failed"
               vulnerabilities_found=true
-            elif echo "$output" | grep -q "VERIFICATION SUCCESSFUL"; then
-              echo "| $file | ✅ Passed |" >> results.md
-              status="passed"
-            else
-              echo "| $file | ⚠️ Unclear |" >> results.md
-              status="unclear"
-            fi
-            
-            echo "" >> results.md
-            echo "### $file" >> results.md
-            if [ "$status" = "failed" ]; then
-              echo "#### Violated Properties:" >> results.md
-              echo "$output" | sed -n '/Violated property:/,/VERIFICATION FAILED/p' >> results.md
-            fi
-            
-            corrected_code=$(echo "$output" | sed -n '/FuSeBMC-AI: Here is the corrected code, verified with ESBMC:/,/```/p' | sed '1d;$d')
-            if [ ! -z "$corrected_code" ]; then
+              
+              echo "" >> results.md
+              echo "### $file" >> results.md
               echo "#### Corrected Code:" >> results.md
               echo '```c' >> results.md
               echo "$corrected_code" >> results.md
@@ -95,7 +96,31 @@ jobs:
               
               # Replace the original file with the corrected code
               echo "$corrected_code" > "$file"
+            else
+              echo "| $file | ✅ Passed |" >> results.md
             fi
+
+            # Process graphml files for violation witnesses
+            docker cp $(docker ps -lq):/workspace/$output_dir/fusebmc_instrument_output ./graphml_files
+            for graphml_file in ./graphml_files/*.graphml; do
+              if [[ $(basename "$graphml_file") != "veri_1.graphml" && $(basename "$graphml_file") != "veri_2.graphml" ]]; then
+                if grep -q "<data key=\"violation\">" "$graphml_file"; then
+                  echo "Violation found in $graphml_file"
+                  echo "#### Violation Details from $graphml_file:" >> results.md
+                  # Extract specific vulnerability details from graphml
+                  line_number=$(xmllint --xpath 'string(//data[@key="startline"])' "$graphml_file")
+                  description=$(xmllint --xpath 'string(//data[@key="description"])' "$graphml_file")
+                  echo "- Line $line_number: $description" >> results.md
+
+                  # Pinpoint the exact part of the code
+                  code_snippet=$(awk "NR==$line_number{print;exit}" $file)
+                  echo '```c' >> results.md
+                  echo "$code_snippet" >> results.md
+                  echo '```' >> results.md
+                  vulnerabilities_found=true
+                fi
+              fi
+            done
             echo "" >> results.md
           fi
         done
