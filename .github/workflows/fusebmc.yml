@@ -30,60 +30,33 @@ jobs:
     - name: Pull FuSeBMC Docker image
       run: docker pull ghcr.io/fusebmc/fusebmc-ai:build_system
 
-    - name: Run privileged command
-      run: |
-        sudo sh -c 'echo core > /proc/sys/kernel/core_pattern'
+    - name: Install xmllint
+      run: sudo apt-get update && sudo apt-get install -y libxml2-utils
 
-    - name: Get changed files
-      id: changed-files
+    - name: Run FuSeBMC and Extract Outputs
+      id: run-fusebmc
       run: |
-        if [ "${{ github.event_name }}" == "pull_request" ]; then
-          git fetch origin ${{ github.base_ref }}
-          changed_files=$(git diff --name-only --diff-filter=ACMRT origin/${{ github.base_ref }} ${{ github.sha }} | grep -E '\.c$|\.i$' || true)
-        elif [ "${{ github.event_name }}" == "push" ]; then
-          if git rev-parse --verify HEAD^1 >/dev/null 2>&1; then
-            changed_files=$(git diff --name-only --diff-filter=ACMRT HEAD^1 HEAD | grep -E '\.c$|\.i$' || true)
-          else
-            changed_files=$(git ls-tree -r --name-only HEAD | grep -E '\.c$|\.i$' || true)
-          fi
-        else
-          changed_files=$(git ls-tree -r --name-only HEAD | grep -E '\.c$|\.i$' || true)
-        fi
-        echo "Changed files: $changed_files"
-        echo "files=$changed_files" >> $GITHUB_OUTPUT
+        docker run --name fusebmc-container --entrypoint /bin/bash -v ${{ github.workspace }}:/workspace ghcr.io/fusebmc/fusebmc-ai:build_system -c "for file in ${{ steps.changed-files.outputs.files }}; do ./fusebmc.bin --ai --verification -a 64 -s incr /workspace/$file; done" > fusebmc_output.log 2>&1
+        docker cp fusebmc-container:/workspace/fusebmc_output ./fusebmc_output
+        docker rm fusebmc-container
 
-    - name: Run FuSeBMC on changed C files
-      id: fusebmc-analysis
+    - name: Analyze FuSeBMC Results
+      id: analyze-results
       run: |
         echo "## FuSeBMC Analysis Results" > results.md
         echo "### Summary" >> results.md
         echo "| File | Status |" >> results.md
         echo "|------|--------|" >> results.md
         vulnerabilities_found=false
+        
         for file in ${{ steps.changed-files.outputs.files }}; do
-          if [ -f "$file" ]; then
-            echo "Processing file: $file"
-            output=$(docker run --rm \
-              -v ${{ github.workspace }}:/workspace \
-              ghcr.io/fusebmc/fusebmc-ai:build_system \
-              --ai --verification -a 64 -s incr /workspace/$file)
+          file_base=$(basename "$file")
+          output_dir=$(find ./fusebmc_output -type d -name "${file_base}_*")
 
-            # Extract the output directory suffix from the logs
-            file_base=$(basename "$file")
-            output_suffix=$(echo "$output" | grep -oP "(?<=fusebmc_output/${file_base}_)[^/]+")
-
-            if [ -z "$output_suffix" ]; then
-              echo "Could not find the output directory suffix in the logs."
-              exit 1
-            fi
-
-            output_dir="fusebmc_output/${file_base}_${output_suffix}"
+          if [ -d "$output_dir" ]; then
             solution_file="$output_dir/solution/correct.c"
-
-            # Extract corrected code
-            docker cp $(docker ps -lq):/workspace/$solution_file ./corrected_code/$file_base
-            if [ -f "./corrected_code/$file_base" ]; then
-              corrected_code=$(cat "./corrected_code/$file_base")
+            if [ -f "$solution_file" ]; then
+              corrected_code=$(cat "$solution_file")
               echo "| $file | ❌ Failed |" >> results.md
               vulnerabilities_found=true
               
@@ -101,24 +74,25 @@ jobs:
             fi
 
             # Process graphml files for violation witnesses
-            docker cp $(docker ps -lq):/workspace/$output_dir/fusebmc_instrument_output ./graphml_files
-            for graphml_file in ./graphml_files/*.graphml; do
-              if [[ $(basename "$graphml_file") != "veri_1.graphml" && $(basename "$graphml_file") != "veri_2.graphml" ]]; then
-                if grep -q "<data key=\"violation\">" "$graphml_file"; then
-                  echo "Violation found in $graphml_file"
-                  echo "#### Violation Details from $graphml_file:" >> results.md
-                  # Extract specific vulnerability details from graphml
-                  line_number=$(xmllint --xpath 'string(//data[@key="startline"])' "$graphml_file")
-                  description=$(xmllint --xpath 'string(//data[@key="description"])' "$graphml_file")
-                  echo "- Line $line_number: $description" >> results.md
+            for graphml_file in $(find "$output_dir/fusebmc_instrument_output" -name "*.graphml" ! -name "veri_1.graphml" ! -name "veri_2.graphml"); do
+              if grep -q "<data key=\"violation\">" "$graphml_file"; then
+                echo "Violation found in $graphml_file"
+                echo "#### Violation Details from $graphml_file:" >> results.md
 
-                  # Pinpoint the exact part of the code
-                  code_snippet=$(awk "NR==$line_number{print;exit}" $file)
-                  echo '```c' >> results.md
-                  echo "$code_snippet" >> results.md
-                  echo '```' >> results.md
-                  vulnerabilities_found=true
-                fi
+                # Extract specific details from the graphml
+                line_number=$(xmllint --xpath 'string(//edge[data[@key="violation"]]/data[@key="startline"])' "$graphml_file")
+
+                # Extract the violation description from stdout
+                description=$(grep -A 5 "VERIFICATION FAILED" fusebmc_output.log | grep -B 5 "line $line_number" | head -1)
+                
+                echo "- Line $line_number: $description" >> results.md
+
+                # Pinpoint the exact part of the code
+                code_snippet=$(awk "NR==$line_number{print;exit}" $file)
+                echo '```c' >> results.md
+                echo "$code_snippet" >> results.md
+                echo '```' >> results.md
+                vulnerabilities_found=true
               fi
             done
             echo "" >> results.md
@@ -134,7 +108,7 @@ jobs:
         path: results.md
 
     - name: Create Pull Request
-      if: steps.fusebmc-analysis.outputs.vulnerabilities_found == 'true'
+      if: steps.analyze-results.outputs.vulnerabilities_found == 'true'
       uses: peter-evans/create-pull-request@v6
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
@@ -150,7 +124,7 @@ jobs:
         base: ${{ github.ref_name }}
 
     - name: Fail if vulnerabilities found
-      if: steps.fusebmc-analysis.outputs.vulnerabilities_found == 'true'
+      if: steps.analyze-results.outputs.vulnerabilities_found == 'true'
       run: |
         echo "Vulnerabilities were found. Pipeline failed."
         exit 1
