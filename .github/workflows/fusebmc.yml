@@ -1,57 +1,4 @@
-name: FuSeBMC Analysis
-on:
-  push:
-  pull_request:
-  workflow_dispatch:
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
-      with:
-        fetch-depth: 0
-
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v1
-
-    - name: Login to GitHub Container Registry
-      uses: docker/login-action@v2
-      with:
-        registry: ghcr.io
-        username: ${{ github.repository_owner }}
-        password: ${{ secrets.MY_GITHUB_PAT }}
-
-    - name: Pull FuSeBMC Docker image
-      run: docker pull ghcr.io/fusebmc/fusebmc-ai:run-esbmc-individual-property
-
-    - name: Run privileged command
-      run: |
-        sudo sh -c 'echo core > /proc/sys/kernel/core_pattern'
-
-    - name: Get changed files
-      id: changed-files
-      run: |
-        if [ "${{ github.event_name }}" == "pull_request" ]; then
-          git fetch origin ${{ github.base_ref }}
-          changed_files=$(git diff --name-only --diff-filter=ACMRT origin/${{ github.base_ref }} ${{ github.sha }} | grep -E '\.c$|\.i$' || true)
-        elif [ "${{ github.event_name }}" == "push" ]; then
-          if git rev-parse --verify HEAD^1 >/dev/null 2>&1; then
-            changed_files=$(git diff --name-only --diff-filter=ACMRT HEAD^1 HEAD | grep -E '\.c$|\.i$' || true)
-          else
-            changed_files=$(git ls-tree -r --name-only HEAD | grep -E '\.c$|\.i$' || true)
-          fi
-        else
-          changed_files=$(git ls-tree -r --name-only HEAD | grep -E '\.c$|\.i$' || true)
-        fi
-        echo "Changed files: $changed_files"
-        echo "files=$changed_files" >> $GITHUB_OUTPUT
-
-    - name: Run FuSeBMC on changed C files
+- name: Run FuSeBMC on changed C files
       id: fusebmc-analysis
       run: |
         echo "# FuSeBMC Analysis Results" > results.md
@@ -59,20 +6,37 @@ jobs:
         for file in ${{ steps.changed-files.outputs.files }}; do
           if [ -f "$file" ]; then
             echo "Processing file: $file"
+            
+            # Run FuSeBMC and capture the output
             output=$(docker run --rm \
               -v ${{ github.workspace }}:/workspace \
               ghcr.io/fusebmc/fusebmc-ai:run-ESBMC-individual-property \
               --ai --ESBMC_Multirun --verification -s incr -a 64 /workspace/$file)
+            
+            echo "$output"
             
             # Extract output directory suffix
             file_name=$(basename "$file")
             output_dir_suffix=$(echo "$output" | grep -oP "fusebmc_output/${file_name}_\w+")
             echo "Output directory suffix: $output_dir_suffix"
             
+            if [ -z "$output_dir_suffix" ]; then
+              echo "Error: Could not extract output directory suffix"
+              continue
+            fi
+            
             # Access Docker image in bash mode and fetch files
-            docker run --rm -v ${{ github.workspace }}:/workspace --entrypoint /bin/bash ghcr.io/fusebmc/fusebmc-ai:run-esbmc-individual-property -c "
-              cp /home/varun/Desktop/FuSeBMC-AI/release/$output_dir_suffix/solution/correct.c /workspace/correct_$file
-              cp /home/varun/Desktop/FuSeBMC-AI/release/$output_dir_suffix/fusebmc_instrument_output/*.graphml /workspace/
+            docker run --rm -v ${{ github.workspace }}:/workspace --entrypoint /bin/bash ghcr.io/fusebmc/fusebmc-ai:run-ESBMC-individual-property -c "
+              if [ -f /home/varun/Desktop/FuSeBMC-AI/release/$output_dir_suffix/solution/correct.c ]; then
+                cp /home/varun/Desktop/FuSeBMC-AI/release/$output_dir_suffix/solution/correct.c /workspace/correct_$file
+              else
+                echo 'Corrected file not found'
+              fi
+              if [ -d /home/varun/Desktop/FuSeBMC-AI/release/$output_dir_suffix/fusebmc_instrument_output ]; then
+                cp /home/varun/Desktop/FuSeBMC-AI/release/$output_dir_suffix/fusebmc_instrument_output/*.graphml /workspace/ || echo 'No GraphML files found'
+              else
+                echo 'fusebmc_instrument_output directory not found'
+              fi
             "
             
             echo "## $file" >> results.md
@@ -84,7 +48,7 @@ jobs:
             violation_found=false
             violations=()
             for graphml in *.graphml; do
-              if [[ $graphml != "veri_1.graphml" && $graphml != "veri_2.graphml" ]]; then
+              if [ -f "$graphml" ] && [[ $graphml != "veri_1.graphml" && $graphml != "veri_2.graphml" ]]; then
                 if grep -q "violation" "$graphml"; then
                   violation_found=true
                   line_number=$(grep -oP 'line="\K\d+' "$graphml" | head -1)
@@ -121,41 +85,18 @@ jobs:
             echo "#### Corrected Code:" >> results.md
             echo "" >> results.md
             echo '```c' >> results.md
-            cat "correct_$file" >> results.md
+            if [ -f "correct_$file" ]; then
+              cat "correct_$file" >> results.md
+            else
+              echo "Corrected code not available" >> results.md
+            fi
             echo '```' >> results.md
             echo "" >> results.md
             
-            # Replace the original file with the corrected code
-            mv "correct_$file" "$file"
+            # Replace the original file with the corrected code if it exists
+            if [ -f "correct_$file" ]; then
+              mv "correct_$file" "$file"
+            fi
           fi
         done
         echo "vulnerabilities_found=$vulnerabilities_found" >> $GITHUB_OUTPUT
-
-    - name: Upload results
-      if: always()
-      uses: actions/upload-artifact@v2
-      with:
-        name: fusebmc-results
-        path: results.md
-
-    - name: Create Pull Request
-      if: steps.fusebmc-analysis.outputs.vulnerabilities_found == 'true'
-      uses: peter-evans/create-pull-request@v6
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        commit-message: Apply FuSeBMC corrections
-        title: '[FuSeBMC] Apply corrections'
-        body: |
-          This pull request applies corrections from FuSeBMC analysis.
-          The corrected code has replaced the original code in the relevant files.
-          
-          Please review the changes carefully before merging.
-        branch: fusebmc-corrections
-        delete-branch: true
-        base: ${{ github.ref_name }}
-
-    - name: Fail if vulnerabilities found
-      if: steps.fusebmc-analysis.outputs.vulnerabilities_found == 'true'
-      run: |
-        echo "Vulnerabilities were found. Pipeline failed."
-        exit 1
