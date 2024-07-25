@@ -61,12 +61,19 @@ jobs:
             echo "Processing file: $file"
             
             # Run FuSeBMC and capture the output
-            output=$(docker run --rm \
+            output=$(docker run \
+              --name fusebmc_container \
               -v ${{ github.workspace }}:/workspace \
-              ghcr.io/fusebmc/fusebmc-ai:run-ESBMC-individual-property \
-              --ai --ESBMC_Multirun --verification -s incr -a 64 /workspace/$file)
+              ghcr.io/fusebmc/fusebmc-ai:build_system \
+              --ai --verification -a 64 -s incr /workspace/$file)
             
             echo "$output"
+            
+            # Copy the entire output directory from the container
+            docker cp fusebmc_container:/fusebmc_output ${{ github.workspace }}/fusebmc_output
+            
+            # Remove the container
+            docker rm fusebmc_container
             
             # Extract output directory suffix
             file_name=$(basename "$file")
@@ -75,22 +82,21 @@ jobs:
             
             if [ -z "$output_dir_suffix" ]; then
               echo "Error: Could not extract output directory suffix"
-              continue
+              exit 1
             fi
             
-            # Access Docker image in bash mode and fetch files
-            docker run --rm -v ${{ github.workspace }}:/workspace --entrypoint /bin/bash ghcr.io/fusebmc/fusebmc-ai:run-ESBMC-individual-property -c "
-              if [ -f /$output_dir_suffix/solution/correct.c ]; then
-                cp /$output_dir_suffix/solution/correct.c /workspace/correct_$file
-              else
-                echo 'Corrected file not found'
-              fi
-              if [ -d /$output_dir_suffix/fusebmc_instrument_output ]; then
-                cp /$output_dir_suffix/fusebmc_instrument_output/*.graphml /workspace/ || echo 'No GraphML files found'
-              else
-                echo 'fusebmc_instrument_output directory not found'
-              fi
-            "
+            # Process the copied files
+            if [ -f "${{ github.workspace }}/$output_dir_suffix/solution/correct.c" ]; then
+              cp "${{ github.workspace }}/$output_dir_suffix/solution/correct.c" "${{ github.workspace }}/correct_$file"
+            else
+              echo 'Corrected file not found'
+            fi
+            
+            if [ -d "${{ github.workspace }}/$output_dir_suffix/fusebmc_instrument_output" ]; then
+              cp "${{ github.workspace }}/$output_dir_suffix/fusebmc_instrument_output"/*.graphml "${{ github.workspace }}/" || echo 'No GraphML files found'
+            else
+              echo 'fusebmc_instrument_output directory not found'
+            fi
             
             echo "## $file" >> results.md
             echo "### Bug Summary" >> results.md
