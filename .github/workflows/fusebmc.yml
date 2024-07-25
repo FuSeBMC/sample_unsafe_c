@@ -73,8 +73,6 @@ jobs:
               ghcr.io/fusebmc/fusebmc-ai:run-ESBMC-individual-property \
               --ai --verification -a 64 -s incr /workspace/$file)
             
-            echo "$output"
-            
             # Copy the output from the container to the workspace
             docker cp fusebmc_container:/fusebmc_output ${{ github.workspace }}/fusebmc_output
             
@@ -84,17 +82,14 @@ jobs:
             file_name=$(basename "$file")
             output_dir=$(find ${{ github.workspace }}/fusebmc_output -type d -name "${file_name}_*" | head -n 1)
             
-            echo "## $file" >> results.md
-            echo "### Bug Summary" >> results.md
-            echo "" >> results.md
-            echo "#### Detected Issues:" >> results.md
-            
             # Analyze GraphML files for violation witnesses
             violation_found=false
             violations=()
             for graphml in $output_dir/fusebmc_instrument_output/*.graphml; do
+              echo "Checking GraphML file: $graphml" 
               if [ -f "$graphml" ] && [[ $graphml != *"veri_1.graphml" && $graphml != *"veri_2.graphml" ]]; then
                 if grep -q '<data key="violation">true</data>' "$graphml"; then
+                  echo "Violation found in the following GraphML file: $graphml"
                   violation_found=true
                   line_number=$(xmllint --xpath "string(//edge[@id='E2']/@source)" "$graphml")
                   line_number=$(xmllint --xpath "string(//edge[@source='$line_number']/data[@key='startline'])" "$graphml")
@@ -112,32 +107,37 @@ jobs:
               status="passed"
             fi
 
+            echo "## $file" >> results.md
+            echo "### Bug Summary" >> results.md
+            echo "" >> results.md
+            echo "#### Detected Issues:" >> results.md
+
             echo "" >> results.md
             echo "### $file" >> results.md
-            if ["$status" = "failed" ]; then
+            echo "### Bug Summary" >> results.md
+            echo "" >> results.md
+            if [ "$status" = "failed" ]; then
               echo "### Violated Properties:" >> results.md
               echo "$output" | sed -n '/Violated property:/,/VERIFICATION FAILED/p' >> results.md
+              echo "" >> results.md
+              echo "#### Annotated Source Code:" >> results.md
+              echo "" >> results.md
+              echo '```c' >> results.md
+            
+              line_number=1
+              while IFS= read -r line; do
+                echo "$line" >> results.md
+                if [[ " ${violations[@]} " =~ " Line $line_number: " ]]; then
+                  echo "  // Violation detected" >> results.md
+                fi
+                ((line_number++))
+              done < "$file"
+            
+              echo '```' >> results.md
+              echo "" >> results.md
+            
+              echo "Corrected source code for $file is present in the PR."
             fi
-            
-            echo "" >> results.md
-            echo "#### Annotated Source Code:" >> results.md
-            echo "" >> results.md
-            echo '```c' >> results.md
-            
-            # Read the file line by line and add annotations
-            line_number=1
-            while IFS= read -r line; do
-              echo "$line" >> results.md
-              if [[ " ${violations[@]} " =~ " Line $line_number: " ]]; then
-                echo "  <!-- Violation detected -->" >> results.md
-              fi
-              ((line_number++))
-            done < "$file"
-            
-            echo '```' >> results.md
-            echo "" >> results.md
-            
-            echo "Corrected source code for $file is present in the PR."
             
             # Replace the original file with the corrected code if it exists
             if [ -f "$output_dir/solution/correct.c" ]; then
@@ -177,3 +177,4 @@ jobs:
       run: |
         echo "Vulnerabilities were found. Pipeline failed."
         exit 1
+
