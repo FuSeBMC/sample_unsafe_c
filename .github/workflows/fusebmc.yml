@@ -27,7 +27,7 @@ jobs:
         password: ${{ secrets.MY_GITHUB_PAT }}
 
     - name: Pull FuSeBMC Docker image
-      run: docker pull ghcr.io/fusebmc/fusebmc-ai:build_system
+      run: docker pull ghcr.io/fusebmc/fusebmc-ai:run-esbmc-individual-property
 
     - name: Run privileged command
       run: |
@@ -70,7 +70,7 @@ jobs:
             echo "Output directory suffix: $output_dir_suffix"
             
             # Access Docker image in bash mode and fetch files
-            docker run --rm -v ${{ github.workspace }}:/workspace --entrypoint /bin/bash ghcr.io/fusebmc/fusebmc-ai:build_system -c "
+            docker run --rm -v ${{ github.workspace }}:/workspace --entrypoint /bin/bash ghcr.io/fusebmc/fusebmc-ai:run-esbmc-individual-property -c "
               cp /home/varun/Desktop/FuSeBMC-AI/release/$output_dir_suffix/solution/correct.c /workspace/correct_$file
               cp /home/varun/Desktop/FuSeBMC-AI/release/$output_dir_suffix/fusebmc_instrument_output/*.graphml /workspace/
             "
