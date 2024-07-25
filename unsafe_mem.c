@@ -28,7 +28,7 @@ void demonstrateVulnerabilities() {
 
     free(data2);
 
-    // Use the data2 pointer after it has been freed.
+    // Use the data2 pointer after it has been freed
     printf("Data2 value after free (use-after-free): %d\n", *data2);  // Use-After-Free Vulnerability
 }
 
