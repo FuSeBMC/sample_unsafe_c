@@ -87,80 +87,80 @@ jobs:
               exit 1
             fi
             
-            # Process the copied files
-            if [ -f "${{ github.workspace }}/fusebmc_output/$output_dir_suffix/solution/correct.c" ]; then
-              cp "${{ github.workspace }}/fusebmc_output/$output_dir_suffix/solution/correct.c" "${{ github.workspace }}/correct_$file"
-            else
-              echo 'Corrected file not found'
-            fi
+        #     # Process the copied files
+        #     if [ -f "${{ github.workspace }}/fusebmc_output/$output_dir_suffix/solution/correct.c" ]; then
+        #       cp "${{ github.workspace }}/fusebmc_output/$output_dir_suffix/solution/correct.c" "${{ github.workspace }}/correct_$file"
+        #     else
+        #       echo 'Corrected file not found'
+        #     fi
             
-            if [ -d "${{ github.workspace }}/fusebmc_output/$output_dir_suffix/fusebmc_instrument_output" ]; then
-              cp "${{ github.workspace }}/fusebmc_output/$output_dir_suffix/fusebmc_instrument_output"/*.graphml "${{ github.workspace }}/" || echo 'No GraphML files found'
-            else
-              echo 'fusebmc_instrument_output directory not found'
-            fi
+        #     if [ -d "${{ github.workspace }}/fusebmc_output/$output_dir_suffix/fusebmc_instrument_output" ]; then
+        #       cp "${{ github.workspace }}/fusebmc_output/$output_dir_suffix/fusebmc_instrument_output"/*.graphml "${{ github.workspace }}/" || echo 'No GraphML files found'
+        #     else
+        #       echo 'fusebmc_instrument_output directory not found'
+        #     fi
             
-            echo "## $file" >> results.md
-            echo "### Bug Summary" >> results.md
-            echo "" >> results.md
-            echo "#### Detected Issues:" >> results.md
+        #     echo "## $file" >> results.md
+        #     echo "### Bug Summary" >> results.md
+        #     echo "" >> results.md
+        #     echo "#### Detected Issues:" >> results.md
             
-            # Analyze GraphML files for violation witnesses
-            violation_found=false
-            violations=()
-            for graphml in *.graphml; do
-              if [ -f "$graphml" ] && [[ $graphml != "veri_1.graphml" && $graphml != "veri_2.graphml" ]]; then
-                if grep -q "violation" "$graphml"; then
-                  violation_found=true
-                  line_number=$(grep -oP 'line="\K\d+' "$graphml" | head -1)
-                  violations+=("- Line $line_number: Violation detected")
-                fi
-              fi
-            done
+        #     # Analyze GraphML files for violation witnesses
+        #     violation_found=false
+        #     violations=()
+        #     for graphml in *.graphml; do
+        #       if [ -f "$graphml" ] && [[ $graphml != "veri_1.graphml" && $graphml != "veri_2.graphml" ]]; then
+        #         if grep -q "violation" "$graphml"; then
+        #           violation_found=true
+        #           line_number=$(grep -oP 'line="\K\d+' "$graphml" | head -1)
+        #           violations+=("- Line $line_number: Violation detected")
+        #         fi
+        #       fi
+        #     done
             
-            if $violation_found; then
-              printf '%s\n' "${violations[@]}" >> results.md
-              vulnerabilities_found=true
-            else
-              echo "- No violations detected" >> results.md
-            fi
+        #     if $violation_found; then
+        #       printf '%s\n' "${violations[@]}" >> results.md
+        #       vulnerabilities_found=true
+        #     else
+        #       echo "- No violations detected" >> results.md
+        #     fi
             
-            echo "" >> results.md
-            echo "#### Annotated Source Code:" >> results.md
-            echo "" >> results.md
-            echo '```c' >> results.md
+        #     echo "" >> results.md
+        #     echo "#### Annotated Source Code:" >> results.md
+        #     echo "" >> results.md
+        #     echo '```c' >> results.md
             
-            # Read the file line by line and add annotations
-            line_number=1
-            while IFS= read -r line; do
-              echo "$line" >> results.md
-              if [[ " ${violations[@]} " =~ " Line $line_number: " ]]; then
-                echo "  <!-- Violation detected -->" >> results.md
-              fi
-              ((line_number++))
-            done < "$file"
+        #     # Read the file line by line and add annotations
+        #     line_number=1
+        #     while IFS= read -r line; do
+        #       echo "$line" >> results.md
+        #       if [[ " ${violations[@]} " =~ " Line $line_number: " ]]; then
+        #         echo "  <!-- Violation detected -->" >> results.md
+        #       fi
+        #       ((line_number++))
+        #     done < "$file"
             
-            echo '```' >> results.md
-            echo "" >> results.md
+        #     echo '```' >> results.md
+        #     echo "" >> results.md
             
-            echo "#### Corrected Code:" >> results.md
-            echo "" >> results.md
-            echo '```c' >> results.md
-            if [ -f "correct_$file" ]; then
-              cat "correct_$file" >> results.md
-            else
-              echo "Corrected code not available" >> results.md
-            fi
-            echo '```' >> results.md
-            echo "" >> results.md
+        #     echo "#### Corrected Code:" >> results.md
+        #     echo "" >> results.md
+        #     echo '```c' >> results.md
+        #     if [ -f "correct_$file" ]; then
+        #       cat "correct_$file" >> results.md
+        #     else
+        #       echo "Corrected code not available" >> results.md
+        #     fi
+        #     echo '```' >> results.md
+        #     echo "" >> results.md
             
-            # Replace the original file with the corrected code if it exists
-            if [ -f "correct_$file" ]; then
-              mv "correct_$file" "$file"
-            fi
-          fi
-        done
-        echo "vulnerabilities_found=$vulnerabilities_found" >> $GITHUB_OUTPUT
+        #     # Replace the original file with the corrected code if it exists
+        #     if [ -f "correct_$file" ]; then
+        #       mv "correct_$file" "$file"
+        #     fi
+        #   fi
+        # done
+        # echo "vulnerabilities_found=$vulnerabilities_found" >> $GITHUB_OUTPUT
 
     - name: Upload results
       if: always()
