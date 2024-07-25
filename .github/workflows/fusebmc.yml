@@ -11,6 +11,10 @@ jobs:
       contents: write
       pull-requests: write
     steps:
+    - name: install deps
+      run: |
+        sudo apt install clang-format
+
     - name: Checkout code
       uses: actions/checkout@v2
       with:
@@ -62,6 +66,7 @@ jobs:
         for file in ${{ steps.changed-files.outputs.files }}; do
           if [ -f "$file" ]; then
             echo "Processing file: $file"
+            clang-format -i --verbose /workspace/$file # lint before FuSeBMC
             output=$(docker run --rm \
               -v ${{ github.workspace }}:/workspace \
               ghcr.io/fusebmc/fusebmc-ai:build_system \
@@ -95,6 +100,7 @@ jobs:
               
               # Replace the original file with the corrected code
               echo "$corrected_code" > "$file"
+              clang-format -i --verbose /workspace/$file # lint after repairing
             fi
             echo "" >> results.md
           fi
