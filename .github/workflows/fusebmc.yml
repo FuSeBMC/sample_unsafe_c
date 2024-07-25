@@ -61,7 +61,7 @@ jobs:
             echo "Processing file: $file"
             output=$(docker run --rm \
               -v ${{ github.workspace }}:/workspace \
-              ghcr.io/fusebmc/fusebmc-ai:build_system \
+              ghcr.io/fusebmc/fusebmc-ai:run-ESBMC-individual-property \
               --ai --ESBMC_Multirun --verification -s incr -a 64 /workspace/$file)
             
             # Extract output directory suffix
