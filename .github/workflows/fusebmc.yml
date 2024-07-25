@@ -60,12 +60,14 @@ jobs:
           if [ -f "$file" ]; then
             echo "Processing file: $file"
             
-            # Run FuSeBMC
-            docker run \
+            # Run FuSeBMC and capture the output
+            output=$(docker run \
               --name fusebmc_container \
               -v ${{ github.workspace }}:/workspace \
               ghcr.io/fusebmc/fusebmc-ai:run-ESBMC-individual-property \
-              --ai --verification -a 64 -s incr /workspace/$file
+              --ai --verification -a 64 -s incr /workspace/$file)
+            
+            echo "$output"
             
             # Copy the output from the container to the workspace
             docker cp fusebmc_container:/fusebmc_output ${{ github.workspace }}/fusebmc_output
@@ -86,17 +88,23 @@ jobs:
             violations=()
             for graphml in $output_dir/fusebmc_instrument_output/*.graphml; do
               if [ -f "$graphml" ] && [[ $graphml != *"veri_1.graphml" && $graphml != *"veri_2.graphml" ]]; then
-                if grep -q "violation" "$graphml"; then
+                if grep -q '<data key="violation">true</data>' "$graphml"; then
                   violation_found=true
-                  line_number=$(grep -oP 'line="\K\d+' "$graphml" | head -1)
+                  line_number=$(xmllint --xpath "string(//edge[@id='E2']/@source)" "$graphml")
+                  line_number=$(xmllint --xpath "string(//edge[@source='$line_number']/data[@key='startline'])" "$graphml")
                   violations+=("- Line $line_number: Violation detected")
+                  vulnerabilities_found=true
                 fi
               fi
             done
             
             if $violation_found; then
               printf '%s\n' "${violations[@]}" >> results.md
-              vulnerabilities_found=true
+              echo "" >> results.md
+              echo "#### Vulnerability Type:" >> results.md
+              echo "\`\`\`" >> results.md
+              echo "$output" | grep -i "violation" >> results.md
+              echo "\`\`\`" >> results.md
             else
               echo "- No violations detected" >> results.md
             fi
@@ -154,4 +162,17 @@ jobs:
         title: '[FuSeBMC] Apply corrections'
         body: |
           This pull request applies corrections from FuSeBMC analysis.
-          The corrected code has replaced the original code
+          Vulnerabilities were detected. Please review the attached results.
+          
+          The corrected code has replaced the original code in the relevant files.
+          
+          Please review the changes carefully before merging.
+        branch: fusebmc-corrections
+        delete-branch: true
+        base: ${{ github.ref_name }}
+
+    - name: Fail if vulnerabilities found
+      if: steps.fusebmc-analysis.outputs.vulnerabilities_found == 'true'
+      run: |
+        echo "Vulnerabilities were found. Pipeline failed."
+        exit 1
