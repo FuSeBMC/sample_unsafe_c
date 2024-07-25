@@ -63,6 +63,7 @@ jobs:
             # Run FuSeBMC and capture the output
             output=$(docker run --rm \
               -v ${{ github.workspace }}:/workspace \
+              -v ${{ github.workspace }}/fusebmc_output:/fusebmc_output \
               ghcr.io/fusebmc/fusebmc-ai:run-ESBMC-individual-property \
               --ai --ESBMC_Multirun --verification -s incr -a 64 /workspace/$file)
             
@@ -78,19 +79,18 @@ jobs:
               continue
             fi
             
-            # Access Docker image in bash mode and fetch files
-            docker run --rm -v ${{ github.workspace }}:/workspace --entrypoint /bin/bash ghcr.io/fusebmc/fusebmc-ai:run-ESBMC-individual-property -c "
-              if [ -f /home/varun/Desktop/FuSeBMC-AI/release/$output_dir_suffix/solution/correct.c ]; then
-                cp /home/varun/Desktop/FuSeBMC-AI/release/$output_dir_suffix/solution/correct.c /workspace/correct_$file
-              else
-                echo 'Corrected file not found'
-              fi
-              if [ -d /home/varun/Desktop/FuSeBMC-AI/release/$output_dir_suffix/fusebmc_instrument_output ]; then
-                cp /home/varun/Desktop/FuSeBMC-AI/release/$output_dir_suffix/fusebmc_instrument_output/*.graphml /workspace/ || echo 'No GraphML files found'
-              else
-                echo 'fusebmc_instrument_output directory not found'
-              fi
-            "
+            # Copy files from the container to the workspace
+            if [ -f "$GITHUB_WORKSPACE/fusebmc_output/$output_dir_suffix/solution/correct.c" ]; then
+              cp "$GITHUB_WORKSPACE/fusebmc_output/$output_dir_suffix/solution/correct.c" "$GITHUB_WORKSPACE/correct_$file"
+            else
+              echo 'Corrected file not found'
+            fi
+            
+            if [ -d "$GITHUB_WORKSPACE/fusebmc_output/$output_dir_suffix/fusebmc_instrument_output" ]; then
+              cp "$GITHUB_WORKSPACE/fusebmc_output/$output_dir_suffix/fusebmc_instrument_output/*.graphml" "$GITHUB_WORKSPACE/" || echo 'No GraphML files found'
+            else
+              echo 'fusebmc_instrument_output directory not found'
+            fi
             
             echo "## $file" >> results.md
             echo "### Bug Summary" >> results.md
