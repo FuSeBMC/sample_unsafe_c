@@ -26,6 +26,9 @@ jobs:
         username: ${{ github.repository_owner }}
         password: ${{ secrets.MY_GITHUB_PAT }}
 
+    - name: Install xmllint
+      run: sudo apt-get update && sudo apt-get install -y libxml2-utils
+
     - name: Pull FuSeBMC Docker image
       run: docker pull ghcr.io/fusebmc/fusebmc-ai:run-ESBMC-individual-property
 
@@ -54,7 +57,10 @@ jobs:
     - name: Run FuSeBMC on changed C files
       id: fusebmc-analysis
       run: |
-        echo "# FuSeBMC Analysis Results" > results.md
+        echo "## FuSeBMC Analysis Results" > results.md
+        echo "### Summary" >> results.md
+        echo "| File | Status |" >> results.md
+        echo "|------|--------|" >> results.md
         vulnerabilities_found=false
         for file in ${{ steps.changed-files.outputs.files }}; do
           if [ -f "$file" ]; then
@@ -97,16 +103,20 @@ jobs:
                 fi
               fi
             done
-            
+
             if $violation_found; then
-              printf '%s\n' "${violations[@]}" >> results.md
-              echo "" >> results.md
-              echo "#### Vulnerability Type:" >> results.md
-              echo "\`\`\`" >> results.md
-              echo "$output" | grep -i "violation" >> results.md
-              echo "\`\`\`" >> results.md
+              echo "| $file | ❌ Failed |" >> results.md
+              status="failed"
             else
-              echo "- No violations detected" >> results.md
+              echo "| $file | ✅ Passed |" >> results.md
+              status="passed"
+            fi
+
+            echo "" >> results.md
+            echo "### $file" >> results.md
+            if ["$status" = "failed" ]; then
+              echo "### Violated Properties:" >> results.md
+              echo "$output" | sed -n '/Violated property:/,/VERIFICATION FAILED/p' >> results.md
             fi
             
             echo "" >> results.md
@@ -127,16 +137,7 @@ jobs:
             echo '```' >> results.md
             echo "" >> results.md
             
-            echo "#### Corrected Code:" >> results.md
-            echo "" >> results.md
-            echo '```c' >> results.md
-            if [ -f "$output_dir/solution/correct.c" ]; then
-              cat "$output_dir/solution/correct.c" >> results.md
-            else
-              echo "Corrected code not available" >> results.md
-            fi
-            echo '```' >> results.md
-            echo "" >> results.md
+            echo "Corrected source code for $file is present in the PR."
             
             # Replace the original file with the corrected code if it exists
             if [ -f "$output_dir/solution/correct.c" ]; then
