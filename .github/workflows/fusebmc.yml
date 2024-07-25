@@ -75,8 +75,9 @@ jobs:
             
             # Remove the container
             docker rm fusebmc_container
+
+            find fusebmc_output
             
-            # Extract output directory suffix
             file_name=$(basename "$file")
             output_dir_suffix=$(echo "$output" | grep -oP "fusebmc_output/${file_name}_\w+")
             echo "Output directory suffix: $output_dir_suffix"
@@ -87,14 +88,14 @@ jobs:
             fi
             
             # Process the copied files
-            if [ -f "${{ github.workspace }}/$output_dir_suffix/solution/correct.c" ]; then
-              cp "${{ github.workspace }}/$output_dir_suffix/solution/correct.c" "${{ github.workspace }}/correct_$file"
+            if [ -f "${{ github.workspace }}/fusebmc_output/$output_dir_suffix/solution/correct.c" ]; then
+              cp "${{ github.workspace }}/fusebmc_output/$output_dir_suffix/solution/correct.c" "${{ github.workspace }}/correct_$file"
             else
               echo 'Corrected file not found'
             fi
             
-            if [ -d "${{ github.workspace }}/$output_dir_suffix/fusebmc_instrument_output" ]; then
-              cp "${{ github.workspace }}/$output_dir_suffix/fusebmc_instrument_output"/*.graphml "${{ github.workspace }}/" || echo 'No GraphML files found'
+            if [ -d "${{ github.workspace }}/fusebmc_output/$output_dir_suffix/fusebmc_instrument_output" ]; then
+              cp "${{ github.workspace }}/fusebmc_output/$output_dir_suffix/fusebmc_instrument_output"/*.graphml "${{ github.workspace }}/" || echo 'No GraphML files found'
             else
               echo 'fusebmc_instrument_output directory not found'
             fi
