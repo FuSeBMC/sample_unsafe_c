@@ -56,6 +56,7 @@ jobs:
       run: |
         echo "# FuSeBMC Analysis Results" > results.md
         vulnerabilities_found=false
+        mkdir -p fusebmc_output
         for file in ${{ steps.changed-files.outputs.files }}; do
           if [ -f "$file" ]; then
             echo "Processing file: $file"
@@ -64,7 +65,7 @@ jobs:
             output=$(docker run \
               --name fusebmc_container \
               -v ${{ github.workspace }}:/workspace \
-              ghcr.io/fusebmc/fusebmc-ai:build_system \
+              ghcr.io/fusebmc/fusebmc-ai:run-ESBMC-individual-property \
               --ai --verification -a 64 -s incr /workspace/$file)
             
             echo "$output"
