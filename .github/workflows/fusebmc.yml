@@ -31,9 +31,6 @@ jobs:
         username: ${{ github.repository_owner }}
         password: ${{ secrets.MY_GITHUB_PAT }}
 
-    - name: Install xmllint
-      run: sudo apt-get update && sudo apt-get install -y libxml2-utils
-
     - name: Pull FuSeBMC Docker image
       run: docker pull ghcr.io/fusebmc/fusebmc-ai:run-ESBMC-individual-property
 
@@ -126,7 +123,7 @@ jobs:
            
               echo "" >> results.md
            
-              echo "Corrected source code for $file is present in the PR."
+              echo "Corrected source code for $file is present in the PR." >> results.md
             fi
            
             # Replace the original file with the corrected code if it exists
