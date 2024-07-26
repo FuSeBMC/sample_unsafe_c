@@ -15,6 +15,11 @@ jobs:
       uses: actions/checkout@v2
       with:
         fetch-depth: 0
+       
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.x'
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v1
@@ -27,7 +32,7 @@ jobs:
         password: ${{ secrets.MY_GITHUB_PAT }}
 
     - name: Pull FuSeBMC Docker image
-      run: docker pull ghcr.io/fusebmc/fusebmc-ai:build_system
+      run: docker pull ghcr.io/fusebmc/fusebmc-ai:run-ESBMC-individual-property
 
     - name: Run privileged command
       run: |
@@ -40,7 +45,7 @@ jobs:
           git fetch origin ${{ github.base_ref }}
           changed_files=$(git diff --name-only --diff-filter=ACMRT origin/${{ github.base_ref }} ${{ github.sha }} | grep -E '\.c$|\.i$' || true)
         elif [ "${{ github.event_name }}" == "push" ]; then
-          if git rev-parse --verify HEAD^1 >/dev/null 2>&1; then
+          if git rev-parse --verizfy HEAD^1 >/dev/null 2>&1; then
             changed_files=$(git diff --name-only --diff-filter=ACMRT HEAD^1 HEAD | grep -E '\.c$|\.i$' || true)
           else
             changed_files=$(git ls-tree -r --name-only HEAD | grep -E '\.c$|\.i$' || true)
@@ -62,41 +67,69 @@ jobs:
         for file in ${{ steps.changed-files.outputs.files }}; do
           if [ -f "$file" ]; then
             echo "Processing file: $file"
-            output=$(docker run --rm \
+           
+            # Run FuSeBMC and capture the output
+            output=$(docker run \
+              --name fusebmc_container \
               -v ${{ github.workspace }}:/workspace \
-              ghcr.io/fusebmc/fusebmc-ai:build_system \
-              --ai --verification -a 64 -s incr /workspace/$file)
-            
-            if echo "$output" | grep -q "VERIFICATION FAILED"; then
+              ghcr.io/fusebmc/fusebmc-ai:run-ESBMC-individual-property \
+              --ESBMC_Multirun --ai --verification -a 64 -s incr /workspace/$file)
+           
+            # Copy the output from the container to the workspace
+            docker cp fusebmc_container:/fusebmc_output ${{ github.workspace }}/fusebmc_output
+           
+            # Remove the container
+            docker rm fusebmc_container
+
+            file_name=$(basename "$file")
+            output_dir=$(find ${{ github.workspace }}/fusebmc_output -type d -name "${file_name}_*" | head -n 1)
+           
+            # Analyze GraphML files for violation witnesses
+            violation_found=false
+            violation_graphmls=()
+            for graphml in $output_dir/fusebmc_instrument_output/*.graphml; do
+              echo "Checking GraphML file: $graphml"
+              if [ -f "$graphml" ] && [[ $graphml != *"veri_1.graphml" && $graphml != *"veri_2.graphml" ]]; then
+                if grep -q '<data key="violation">true</data>' "$graphml"; then
+                  echo "Violation found in the following GraphML file: $graphml"
+                  violation_found=true
+                  vulnerabilities_found=true
+                  violation_graphmls+=("$graphml")
+                fi
+              fi
+            done
+
+            if $violation_found; then
               echo "| $file | ❌ Failed |" >> results.md
               status="failed"
-              vulnerabilities_found=true
-            elif echo "$output" | grep -q "VERIFICATION SUCCESSFUL"; then
+            else
               echo "| $file | ✅ Passed |" >> results.md
               status="passed"
-            else
-              echo "| $file | ⚠️ Unclear |" >> results.md
-              status="unclear"
             fi
-            
+
             echo "" >> results.md
             echo "### $file" >> results.md
-            if [ "$status" = "failed" ]; then
-              echo "#### Violated Properties:" >> results.md
-              echo "$output" | sed -n '/Violated property:/,/VERIFICATION FAILED/p' >> results.md
-            fi
-            
-            corrected_code=$(echo "$output" | sed -n '/FuSeBMC-AI: Here is the corrected code, verified with ESBMC:/,/```/p' | sed '1d;$d')
-            if [ ! -z "$corrected_code" ]; then
-              echo "#### Corrected Code:" >> results.md
-              echo '```c' >> results.md
-              echo "$corrected_code" >> results.md
-              echo '```' >> results.md
-              
-              # Replace the original file with the corrected code
-              echo "$corrected_code" > "$file"
-            fi
+            echo "### Bug Summary" >> results.md
             echo "" >> results.md
+            if [ "$status" = "failed" ]; then
+              echo "### Violated Properties:" >> results.md
+              echo "$output" | sed -n '/Violated property:/,/VERIFICATION FAILED/p' >> results.md
+              echo "" >> results.md
+              echo "#### Annotated Source Code:" >> results.md
+              echo "" >> results.md
+              echo '```c' >> results.md
+
+              python3 .github/scripts/annotate_code.py "$file" "${violation_graphmls[@]}" >> results.md
+           
+              echo "" >> results.md
+           
+              echo "Corrected source code for $file is present in the PR." >> results.md
+            fi
+           
+            # Replace the original file with the corrected code if it exists
+            if [ -f "$output_dir/solution/correct.c" ]; then
+              cp "$output_dir/solution/correct.c" "$file"
+            fi
           fi
         done
         echo "vulnerabilities_found=$vulnerabilities_found" >> $GITHUB_OUTPUT
@@ -117,8 +150,10 @@ jobs:
         title: '[FuSeBMC] Apply corrections'
         body: |
           This pull request applies corrections from FuSeBMC analysis.
+          Vulnerabilities were detected. Please review the attached results.
+         
           The corrected code has replaced the original code in the relevant files.
-          
+         
           Please review the changes carefully before merging.
         branch: fusebmc-corrections
         delete-branch: true

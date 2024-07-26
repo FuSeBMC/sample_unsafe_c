@@ -5,7 +5,7 @@ void demonstrateVulnerabilities() {
     // Double Free Vulnerability
     int *data1 = (int*)malloc(sizeof(int));
     if (data1 == NULL) {
-        printf("Memory allocation failed.\n");
+        printf("Memory allocation failed\n");
         return;
     }
 
@@ -19,7 +19,7 @@ void demonstrateVulnerabilities() {
     // Use-After-Free Vulnerabilityy
     int *data2 = (int*)malloc(sizeof(int));
     if (data2 == NULL) {
-        printf("Memory allocation failed, boo hoo\n");
+        printf("Memory allocation failed.\n");
         return;
     }
 
