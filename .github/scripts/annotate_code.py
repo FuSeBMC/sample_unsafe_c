@@ -58,7 +58,7 @@ def annotate_source_code(source_code, all_violation_info):
     return '\n'.join(annotated_lines)
 
 def generate_markdown_report(annotated_code, all_violation_info):
-    markdown_content += "```c\n"
+    markdown_content = "```c\n"
     markdown_content += annotated_code
     markdown_content += "\n```\n"
    
