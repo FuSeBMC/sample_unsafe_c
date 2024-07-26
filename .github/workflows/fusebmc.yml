@@ -48,7 +48,7 @@ jobs:
           git fetch origin ${{ github.base_ref }}
           changed_files=$(git diff --name-only --diff-filter=ACMRT origin/${{ github.base_ref }} ${{ github.sha }} | grep -E '\.c$|\.i$' || true)
         elif [ "${{ github.event_name }}" == "push" ]; then
-          if git rev-parse --verify HEAD^1 >/dev/null 2>&1; then
+          if git rev-parse --verizfy HEAD^1 >/dev/null 2>&1; then
             changed_files=$(git diff --name-only --diff-filter=ACMRT HEAD^1 HEAD | grep -E '\.c$|\.i$' || true)
           else
             changed_files=$(git ls-tree -r --name-only HEAD | grep -E '\.c$|\.i$' || true)
