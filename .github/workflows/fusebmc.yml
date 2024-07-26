@@ -15,6 +15,11 @@ jobs:
       uses: actions/checkout@v2
       with:
         fetch-depth: 0
+       
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.x'
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v1
@@ -65,36 +70,34 @@ jobs:
         for file in ${{ steps.changed-files.outputs.files }}; do
           if [ -f "$file" ]; then
             echo "Processing file: $file"
-            
+           
             # Run FuSeBMC and capture the output
             output=$(docker run \
               --name fusebmc_container \
               -v ${{ github.workspace }}:/workspace \
               ghcr.io/fusebmc/fusebmc-ai:run-ESBMC-individual-property \
               --ESBMC_Multirun --ai --verification -a 64 -s incr /workspace/$file)
-            
+           
             # Copy the output from the container to the workspace
             docker cp fusebmc_container:/fusebmc_output ${{ github.workspace }}/fusebmc_output
-            
+           
             # Remove the container
             docker rm fusebmc_container
 
             file_name=$(basename "$file")
             output_dir=$(find ${{ github.workspace }}/fusebmc_output -type d -name "${file_name}_*" | head -n 1)
-            
+           
             # Analyze GraphML files for violation witnesses
             violation_found=false
-            violations=()
+            violation_graphmls=()
             for graphml in $output_dir/fusebmc_instrument_output/*.graphml; do
-              echo "Checking GraphML file: $graphml" 
+              echo "Checking GraphML file: $graphml"
               if [ -f "$graphml" ] && [[ $graphml != *"veri_1.graphml" && $graphml != *"veri_2.graphml" ]]; then
                 if grep -q '<data key="violation">true</data>' "$graphml"; then
                   echo "Violation found in the following GraphML file: $graphml"
                   violation_found=true
-                  line_number=$(xmllint --xpath "string(//edge[@id='E2']/@source)" "$graphml")
-                  line_number=$(xmllint --xpath "string(//edge[@source='$line_number']/data[@key='startline'])" "$graphml")
-                  violations+=("- Line $line_number: Violation detected")
                   vulnerabilities_found=true
+                  violation_graphmls+=("$graphml")
                 fi
               fi
             done
@@ -107,11 +110,6 @@ jobs:
               status="passed"
             fi
 
-            echo "## $file" >> results.md
-            echo "### Bug Summary" >> results.md
-            echo "" >> results.md
-            echo "#### Detected Issues:" >> results.md
-
             echo "" >> results.md
             echo "### $file" >> results.md
             echo "### Bug Summary" >> results.md
@@ -123,22 +121,14 @@ jobs:
               echo "#### Annotated Source Code:" >> results.md
               echo "" >> results.md
               echo '```c' >> results.md
-            
-              line_number=1
-              while IFS= read -r line; do
-                echo "$line" >> results.md
-                if [[ " ${violations[@]} " =~ " Line $line_number: " ]]; then
-                  echo "  // Violation detected" >> results.md
-                fi
-                ((line_number++))
-              done < "$file"
-            
-              echo '```' >> results.md
+
+              python3 .github/scripts/annotate_code.py "$file" "${violation_graphmls[@]}" >> results.md
+           
               echo "" >> results.md
-            
+           
               echo "Corrected source code for $file is present in the PR."
             fi
-            
+           
             # Replace the original file with the corrected code if it exists
             if [ -f "$output_dir/solution/correct.c" ]; then
               cp "$output_dir/solution/correct.c" "$file"
@@ -164,9 +154,9 @@ jobs:
         body: |
           This pull request applies corrections from FuSeBMC analysis.
           Vulnerabilities were detected. Please review the attached results.
-          
+         
           The corrected code has replaced the original code in the relevant files.
-          
+         
           Please review the changes carefully before merging.
         branch: fusebmc-corrections
         delete-branch: true
@@ -177,4 +167,3 @@ jobs:
       run: |
         echo "Vulnerabilities were found. Pipeline failed."
         exit 1
-
