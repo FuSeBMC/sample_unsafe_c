@@ -402,7 +402,7 @@ def main():
 
     graphml_files = [f for f in os.listdir(args.directory) if f.endswith('.graphml')]
     graphml_data = []
-
+    
     for graphml_file in graphml_files:
         file_path = os.path.join(args.directory, graphml_file)
         print(f"Processing file: {file_path}")
@@ -414,8 +414,7 @@ def main():
         graphml_data.append(parsed_graphml)
 
     sarif = build_sarif(graphml_data)
-    print(sarif)
-    sarif_file_path = os.path.splitext(graphml_data[0]["data"]["file_name"])[0] + '.sarif'
+    sarif_file_path = os.path.join(args.directory,os.path.basename(os.path.splitext(graphml_data[0]["data"]["file_name"])[0])) + '.sarif'
     with open(sarif_file_path, 'w') as sarif_file:
         json.dump(to_dict(sarif), sarif_file, indent=2)
     print(f"SARIF file generated: {sarif_file_path}")

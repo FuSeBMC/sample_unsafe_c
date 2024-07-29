@@ -85,6 +85,8 @@ jobs:
                 fi
               fi
             done
+            python3 .github/scripts/Make_Sarif.py $output_dir/fusebmc_instrument_output
+            cat $output_dir/fusebmc_instrument_output/*.sarif
           fi
         done
         echo "vulnerabilities_found=$vulnerabilities_found" >> $GITHUB_OUTPUT
