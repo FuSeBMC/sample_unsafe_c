@@ -2,6 +2,7 @@ name: FuSeBMC Analysis
 on:
   pull_request:
   workflow_dispatch:
+  push:
 
 jobs:
   build:
