@@ -96,6 +96,11 @@ jobs:
         echo "vulnerabilities_found=$vulnerabilities_found" >> $GITHUB_OUTPUT
         find .
 
+    - name: Upload SARIF results
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: ${{ github.workspace }}/fusebmc_output/**/*.sarif
+
     - name: Upload results
       if: always()
       uses: actions/upload-artifact@v2
