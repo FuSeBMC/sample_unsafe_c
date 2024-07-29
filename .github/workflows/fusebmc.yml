@@ -96,7 +96,7 @@ jobs:
               fi
             done
 
-            python3 .github/scripts/Make_Sarif.py $output/dir/fusebmc_instrument_output >> "${file_name}.sarif"
+            python3 .github/scripts/Make_Sarif.py $output_dir/fusebmc_instrument_output >> "${file_name}.sarif"
           fi
         done
         find . -name '*.sarif' -exec mv {} ${{ github.workspace }}/sarif_output/ \;
