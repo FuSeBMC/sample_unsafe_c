@@ -87,6 +87,7 @@ jobs:
           fi
         done
         echo "vulnerabilities_found=$vulnerabilities_found" >> $GITHUB_OUTPUT
+        find .
 
     - name: Upload results
       if: always()
