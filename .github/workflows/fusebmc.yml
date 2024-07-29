@@ -16,7 +16,7 @@ jobs:
       with:
         fetch-depth: 0
 
-    -name: Install dependencies
+    - name: Install dependencies
       run: |
         pip install -r .github/scripts/Make_Sarif_Requirements.txt
 
