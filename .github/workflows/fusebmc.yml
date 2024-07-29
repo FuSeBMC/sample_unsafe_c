@@ -1,6 +1,5 @@
 name: FuSeBMC Analysis
 on:
-  push:
   pull_request:
   workflow_dispatch:
 
@@ -15,11 +14,6 @@ jobs:
       uses: actions/checkout@v2
       with:
         fetch-depth: 0
-       
-    - name: Set up Python
-      uses: actions/setup-python@v2
-      with:
-        python-version: '3.x'
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v1
@@ -59,10 +53,6 @@ jobs:
     - name: Run FuSeBMC on changed C files
       id: fusebmc-analysis
       run: |
-        echo "## FuSeBMC Analysis Results" > results.md
-        echo "### Summary" >> results.md
-        echo "| File | Status |" >> results.md
-        echo "|------|--------|" >> results.md
         vulnerabilities_found=false
         for file in ${{ steps.changed-files.outputs.files }}; do
           if [ -f "$file" ]; then
@@ -85,51 +75,15 @@ jobs:
             output_dir=$(find ${{ github.workspace }}/fusebmc_output -type d -name "${file_name}_*" | head -n 1)
            
             # Analyze GraphML files for violation witnesses
-            violation_found=false
-            violation_graphmls=()
             for graphml in $output_dir/fusebmc_instrument_output/*.graphml; do
               echo "Checking GraphML file: $graphml"
               if [ -f "$graphml" ] && [[ $graphml != *"veri_1.graphml" && $graphml != *"veri_2.graphml" ]]; then
                 if grep -q '<data key="violation">true</data>' "$graphml"; then
                   echo "Violation found in the following GraphML file: $graphml"
-                  violation_found=true
                   vulnerabilities_found=true
-                  violation_graphmls+=("$graphml")
                 fi
               fi
             done
-
-            if $violation_found; then
-              echo "| $file | ❌ Failed |" >> results.md
-              status="failed"
-            else
-              echo "| $file | ✅ Passed |" >> results.md
-              status="passed"
-            fi
-
-            echo "" >> results.md
-            echo "### $file" >> results.md
-            echo "### Bug Summary" >> results.md
-            echo "" >> results.md
-            if [ "$status" = "failed" ]; then
-              echo "### Violated Properties:" >> results.md
-              echo "$output" | sed -n '/Violated property:/,/VERIFICATION FAILED/p' >> results.md
-              echo "" >> results.md
-              echo "#### Annotated Source Code:" >> results.md
-              echo "" >> results.md
-              echo '```c' >> results.md
-
-              python3 .github/scripts/annotate_code.py "$file" "${violation_graphmls[@]}" >> results.md
-           
-              echo "" >> results.md
-           
-              echo "Corrected source code for $file is present in the PR." >> results.md
-            fi
-           
-            # Replace the original file with the corrected code if it exists
-            if [ -f "$output_dir/solution/correct.c" ]; then
-              cp "$output_dir/solution/correct.c" "$file"
-            fi
           fi
         done
         echo "vulnerabilities_found=$vulnerabilities_found" >> $GITHUB_OUTPUT
