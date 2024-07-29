@@ -11,6 +11,7 @@ jobs:
       contents: write
       pull-requests: write
       security-events: write
+      actions: read
     steps:
     - name: Checkout code
       uses: actions/checkout@v2
