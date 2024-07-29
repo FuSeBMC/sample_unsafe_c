@@ -63,6 +63,7 @@ jobs:
     - name: Run FuSeBMC on changed C files
       id: fusebmc-analysis
       run: |
+        mkdir -p ${{ github.workspace }}/sarif_output  
         vulnerabilities_found=false
         for file in ${{ steps.changed-files.outputs.files }}; do
           if [ -f "$file" ]; then
@@ -98,6 +99,7 @@ jobs:
             python3 .github/scripts/Make_Sarif.py $output/dir/fusebmc_instrument_output >> "${file_name}.sarif"
           fi
         done
+        find . -name '*.sarif' -exec mv {} ${{ github.workspace }}/sarif_output/ \;
         echo "vulnerabilities_found=$vulnerabilities_found" >> $GITHUB_OUTPUT
 
     - name: Upload results
@@ -107,23 +109,10 @@ jobs:
         name: fusebmc-results
         path: results.md
 
-    - name: Create Pull Request
-      if: steps.fusebmc-analysis.outputs.vulnerabilities_found == 'true'
-      uses: peter-evans/create-pull-request@v6
+    - name: Upload SARIF files for Code Scanning
+      uses: github/codeql-action/upload-sarif@v2
       with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        commit-message: Apply FuSeBMC corrections
-        title: '[FuSeBMC] Apply corrections'
-        body: |
-          This pull request applies corrections from FuSeBMC analysis.
-          Vulnerabilities were detected. Please review the attached results.
-         
-          The corrected code has replaced the original code in the relevant files.
-         
-          Please review the changes carefully before merging.
-        branch: fusebmc-corrections
-        delete-branch: true
-        base: ${{ github.ref_name }}
+        sarif_file: ${{ github.workspace }}/sarif_output
 
     - name: Fail if vulnerabilities found
       if: steps.fusebmc-analysis.outputs.vulnerabilities_found == 'true'
