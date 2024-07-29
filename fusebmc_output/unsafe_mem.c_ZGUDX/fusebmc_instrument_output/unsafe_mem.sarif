@@ -1,0 +1,329 @@
+{
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "FuSeBMC",
+          "contents": [
+            "localizedData",
+            "nonLocalizedData"
+          ],
+          "information_uri": "https://github.com/kaled-alshmrany/FuSeBMC",
+          "language": "en-US",
+          "rules": [
+            {
+              "id": "align",
+              "default_configuration": {
+                "enabled": true,
+                "level": "error",
+                "rank": -1.0
+              },
+              "full_description": {
+                "text": "Placeholder"
+              },
+              "name": "align",
+              "short_description": {
+                "text": "Placeholder"
+              }
+            },
+            {
+              "id": "assertions",
+              "default_configuration": {
+                "enabled": true,
+                "level": "error",
+                "rank": -1.0
+              },
+              "full_description": {
+                "text": "Placeholder"
+              },
+              "name": "assertions",
+              "short_description": {
+                "text": "Placeholder"
+              }
+            },
+            {
+              "id": "atomicity",
+              "default_configuration": {
+                "enabled": true,
+                "level": "error",
+                "rank": -1.0
+              },
+              "full_description": {
+                "text": "Placeholder"
+              },
+              "name": "atomicity",
+              "short_description": {
+                "text": "Placeholder"
+              }
+            },
+            {
+              "id": "bounds",
+              "default_configuration": {
+                "enabled": true,
+                "level": "error",
+                "rank": -1.0
+              },
+              "full_description": {
+                "text": "Placeholder"
+              },
+              "name": "bounds",
+              "short_description": {
+                "text": "Placeholder"
+              }
+            },
+            {
+              "id": "data-races",
+              "default_configuration": {
+                "enabled": true,
+                "level": "error",
+                "rank": -1.0
+              },
+              "full_description": {
+                "text": "Placeholder"
+              },
+              "name": "data-races",
+              "short_description": {
+                "text": "Placeholder"
+              }
+            },
+            {
+              "id": "deadlock",
+              "default_configuration": {
+                "enabled": true,
+                "level": "error",
+                "rank": -1.0
+              },
+              "full_description": {
+                "text": "Placeholder"
+              },
+              "name": "deadlock",
+              "short_description": {
+                "text": "Placeholder"
+              }
+            },
+            {
+              "id": "div-by-zero",
+              "default_configuration": {
+                "enabled": true,
+                "level": "error",
+                "rank": -1.0
+              },
+              "full_description": {
+                "text": "Placeholder"
+              },
+              "name": "div-by-zero",
+              "short_description": {
+                "text": "Placeholder"
+              }
+            },
+            {
+              "id": "lock-order",
+              "default_configuration": {
+                "enabled": true,
+                "level": "error",
+                "rank": -1.0
+              },
+              "full_description": {
+                "text": "Placeholder"
+              },
+              "name": "lock-order",
+              "short_description": {
+                "text": "Placeholder"
+              }
+            },
+            {
+              "id": "nan",
+              "default_configuration": {
+                "enabled": true,
+                "level": "error",
+                "rank": -1.0
+              },
+              "full_description": {
+                "text": "Placeholder"
+              },
+              "name": "nan",
+              "short_description": {
+                "text": "Placeholder"
+              }
+            },
+            {
+              "id": "overflow",
+              "default_configuration": {
+                "enabled": true,
+                "level": "error",
+                "rank": -1.0
+              },
+              "full_description": {
+                "text": "Placeholder"
+              },
+              "name": "overflow",
+              "short_description": {
+                "text": "Placeholder"
+              }
+            },
+            {
+              "id": "pointer",
+              "default_configuration": {
+                "enabled": true,
+                "level": "error",
+                "rank": -1.0
+              },
+              "full_description": {
+                "text": "Placeholder"
+              },
+              "name": "pointer",
+              "short_description": {
+                "text": "Placeholder"
+              }
+            },
+            {
+              "id": "struct-fields",
+              "default_configuration": {
+                "enabled": true,
+                "level": "error",
+                "rank": -1.0
+              },
+              "full_description": {
+                "text": "Placeholder"
+              },
+              "name": "struct-fields",
+              "short_description": {
+                "text": "Placeholder"
+              }
+            },
+            {
+              "id": "ub-shift",
+              "default_configuration": {
+                "enabled": true,
+                "level": "error",
+                "rank": -1.0
+              },
+              "full_description": {
+                "text": "Placeholder"
+              },
+              "name": "ub-shift",
+              "short_description": {
+                "text": "Placeholder"
+              }
+            },
+            {
+              "id": "unlimited-scanf",
+              "default_configuration": {
+                "enabled": true,
+                "level": "error",
+                "rank": -1.0
+              },
+              "full_description": {
+                "text": "Placeholder"
+              },
+              "name": "unlimited-scanf",
+              "short_description": {
+                "text": "Placeholder"
+              }
+            },
+            {
+              "id": "unsigned-overflow",
+              "default_configuration": {
+                "enabled": true,
+                "level": "error",
+                "rank": -1.0
+              },
+              "full_description": {
+                "text": "Placeholder"
+              },
+              "name": "unsigned-overflow",
+              "short_description": {
+                "text": "Placeholder"
+              }
+            },
+            {
+              "id": "vla-size",
+              "default_configuration": {
+                "enabled": true,
+                "level": "error",
+                "rank": -1.0
+              },
+              "full_description": {
+                "text": "Placeholder"
+              },
+              "name": "vla-size",
+              "short_description": {
+                "text": "Placeholder"
+              }
+            }
+          ],
+          "version": "AI-dev"
+        }
+      },
+      "invocations": [
+        {
+          "execution_successful": true,
+          "end_time_utc": "2024-07-29T20:10:47.896604Z",
+          "start_time_utc": "2024-07-29T20:10:47.896596Z"
+        }
+      ],
+      "language": "en-US",
+      "newline_sequences": [
+        "\r\n",
+        "\n"
+      ],
+      "results": [
+        {
+          "message": {
+            "text": "A vulnerability was found."
+          },
+          "kind": "fail",
+          "level": "warning",
+          "locations": [
+            {
+              "id": -1,
+              "physical_location": {
+                "artifact_location": {
+                  "index": -1,
+                  "uri": "/workspace/unsafe_mem.c"
+                },
+                "region": {
+                  "byte_offset": -1,
+                  "char_offset": -1,
+                  "end_line": 6,
+                  "start_line": 6
+                }
+              }
+            }
+          ],
+          "rank": -1.0,
+          "rule_id": "pointer-check",
+          "rule_index": -1
+        },
+        {
+          "message": {
+            "text": "A vulnerability was found."
+          },
+          "kind": "fail",
+          "level": "warning",
+          "locations": [
+            {
+              "id": -1,
+              "physical_location": {
+                "artifact_location": {
+                  "index": -1,
+                  "uri": "/workspace/unsafe_mem.c"
+                },
+                "region": {
+                  "byte_offset": -1,
+                  "char_offset": -1,
+                  "end_line": 17,
+                  "start_line": 17
+                }
+              }
+            }
+          ],
+          "rank": -1.0,
+          "rule_id": "pointer-check",
+          "rule_index": -1
+        }
+      ]
+    }
+  ],
+  "version": "2.1.0"
+}
