@@ -6,13 +6,19 @@ import uuid
 from datetime import datetime
 import sarif_om as sarif
 
+
+def snake_to_camel(snake_str):
+    components = snake_str.split('_')
+    return components[0] + ''.join(x.title() for x in components[1:])
+
 def to_dict(obj):
     if isinstance(obj, list):
         return [to_dict(v) for v in obj]
     elif hasattr(obj, "__dict__"):
-        return {k: to_dict(v) for k, v in obj.__dict__.items() if v is not None}
+        return {snake_to_camel(k): to_dict(v) for k, v in obj.__dict__.items() if v is not None}
     else:
         return obj
+
 
 
 
@@ -410,10 +416,10 @@ def main():
             "data" : parse_graphml_file(file_path),
             "type" : graphml_file[:-8] # remove ".graphml"
         }
-        print(parsed_graphml)
         graphml_data.append(parsed_graphml)
 
     sarif = build_sarif(graphml_data)
+    print(sarif)
     sarif_file_path = os.path.join(args.directory,os.path.basename(os.path.splitext(graphml_data[0]["data"]["file_name"])[0])) + '.sarif'
     with open(sarif_file_path, 'w') as sarif_file:
         json.dump(to_dict(sarif), sarif_file, indent=2)
