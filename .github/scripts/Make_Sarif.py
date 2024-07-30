@@ -92,7 +92,7 @@ def parse_graphml_file(file_path):
     return data
 
 
-def build_sarif(data):
+def build_sarif(data,rules):
     sarif_log = sarif.SarifLog(
         version="2.1.0",
         runs=[]
@@ -103,7 +103,7 @@ def build_sarif(data):
             name="FuSeBMC", # hardcoded tool info, improve this later
             version="AI-dev",
             information_uri="https://github.com/kaled-alshmrany/FuSeBMC",
-            rules= load_json_rules("rules.json")
+            rules= load_json_rules(rules)
         )
     )
 
@@ -153,6 +153,7 @@ def build_sarif(data):
 def main():
     parser = argparse.ArgumentParser(description="Process GraphML files and convert them to SARIF.")
     parser.add_argument("directory", help="Directory containing GraphML files")
+    parser.add_argument("rules", help="JSON containing ESBMC rules")
     args = parser.parse_args()
 
     graphml_files = [f for f in os.listdir(args.directory) if f.endswith('.graphml')]
@@ -167,7 +168,7 @@ def main():
         }
         graphml_data.append(parsed_graphml)
 
-    sarif = build_sarif(graphml_data)
+    sarif = build_sarif(graphml_data,args.rules)
     print(sarif)
     sarif_file_path = os.path.join(args.directory,os.path.basename(os.path.splitext(graphml_data[0]["data"]["file_name"])[0])) + '.sarif'
     with open(sarif_file_path, 'w') as sarif_file:
