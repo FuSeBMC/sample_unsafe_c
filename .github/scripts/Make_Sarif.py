@@ -19,6 +19,31 @@ def to_dict(obj):
     else:
         return obj
 
+def load_json_rules(json_file):
+    with open(json_file, 'r') as f:
+        rules_data = json.load(f)
+    
+    rules = []
+    for rule in rules_data:
+        rules.append(
+            sarif.ReportingDescriptor(
+                id=rule["id"],
+                name=rule["name"],
+                short_description=sarif.MultiformatMessageString(
+                    text=rule["short_description"]
+                ),
+                full_description=sarif.MultiformatMessageString(
+                    text=rule["full_description"]
+                ),
+                default_configuration=sarif.ReportingConfiguration(
+                    level=rule["level"]
+                )
+            )
+        )
+    
+    return rules
+
+
 
 
 
@@ -66,72 +91,6 @@ def parse_graphml_file(file_path):
             data['violations'].append(int(startline_elem.text)) 
     return data
 
-def convert_to_sarif(graphml_data):
-    runs = []
-    results = []
-
-    for edge in graphml_data['edges']:
-        if 'startline' in edge:
-            result = {
-                "ruleId": "CustomRule",
-                "message": {
-                    "text": "Violation detected"
-                },
-                "locations": [
-                    {
-                        "physicalLocation": {
-                            "artifactLocation": {
-                                "uri": graphml_data['nodes'][edge['source']].get('programfile')
-                            },
-                            "region": {
-                                "startLine": int(edge['startline']),
-                                "endLine": int(edge['endline']) if 'endline' in edge else int(edge['startline']),
-                            }
-                        }
-                    }
-                ]
-            }
-            results.append(result)
-
-    run = {
-        "tool": {
-            "driver": {
-                "name": "Custom Static Analysis Tool",
-                "informationUri": "https://example.com",
-                "rules": [
-                    {
-                        "id": "CustomRule",
-                        "name": "Violation Rule",
-                        "shortDescription": {
-                            "text": "This rule detects violations."
-                        },
-                        "fullDescription": {
-                            "text": "A full description of the violation rule."
-                        },
-                        "defaultConfiguration": {
-                            "level": "error"
-                        }
-                    }
-                ]
-            }
-        },
-        "results": results,
-        "invocations": [
-            {
-                "executionSuccessful": True,
-                "startTimeUtc": datetime.utcnow().isoformat() + "Z",
-                "endTimeUtc": datetime.utcnow().isoformat() + "Z"
-            }
-        ]
-    }
-
-    runs.append(run)
-    sarif_log = {
-        "version": "2.1.0",
-        "runs": runs
-    }
-
-    return sarif_log
 
 def build_sarif(data):
     sarif_log = sarif.SarifLog(
@@ -144,217 +103,7 @@ def build_sarif(data):
             name="FuSeBMC", # hardcoded tool info, improve this later
             version="AI-dev",
             information_uri="https://github.com/kaled-alshmrany/FuSeBMC",
-            rules=[
-                sarif.ReportingDescriptor(
-                    id="align",
-                    name="align",
-                    short_description=sarif.MultiformatMessageString(
-                        text="Placeholder"
-                    ),
-                    full_description=sarif.MultiformatMessageString(
-                        text="Placeholder"
-                    ),
-                    default_configuration=sarif.ReportingConfiguration(
-                        level="error"
-                    )
-                ),
-                sarif.ReportingDescriptor(
-                    id="assertions",
-                    name="assertions",
-                    short_description=sarif.MultiformatMessageString(
-                        text="Placeholder"
-                    ),
-                    full_description=sarif.MultiformatMessageString(
-                        text="Placeholder"
-                    ),
-                    default_configuration=sarif.ReportingConfiguration(
-                        level="error"
-                    )
-                ),
-                sarif.ReportingDescriptor(
-                    id="atomicity",
-                    name="atomicity",
-                    short_description=sarif.MultiformatMessageString(
-                        text="Placeholder"
-                    ),
-                    full_description=sarif.MultiformatMessageString(
-                        text="Placeholder"
-                    ),
-                    default_configuration=sarif.ReportingConfiguration(
-                        level="error"
-                    )
-                ),
-                sarif.ReportingDescriptor(
-                    id="bounds",
-                    name="bounds",
-                    short_description=sarif.MultiformatMessageString(
-                        text="Placeholder"
-                    ),
-                    full_description=sarif.MultiformatMessageString(
-                        text="Placeholder"
-                    ),
-                    default_configuration=sarif.ReportingConfiguration(
-                        level="error"
-                    )
-                ),
-                sarif.ReportingDescriptor(
-                    id="data-races",
-                    name="data-races",
-                    short_description=sarif.MultiformatMessageString(
-                        text="Placeholder"
-                    ),
-                    full_description=sarif.MultiformatMessageString(
-                        text="Placeholder"
-                    ),
-                    default_configuration=sarif.ReportingConfiguration(
-                        level="error"
-                    )
-                ),
-                sarif.ReportingDescriptor(
-                    id="deadlock",
-                    name="deadlock",
-                    short_description=sarif.MultiformatMessageString(
-                        text="Placeholder"
-                    ),
-                    full_description=sarif.MultiformatMessageString(
-                        text="Placeholder"
-                    ),
-                    default_configuration=sarif.ReportingConfiguration(
-                        level="error"
-                    )
-                ),
-                sarif.ReportingDescriptor(
-                    id="div-by-zero",
-                    name="div-by-zero",
-                    short_description=sarif.MultiformatMessageString(
-                        text="Placeholder"
-                    ),
-                    full_description=sarif.MultiformatMessageString(
-                        text="Placeholder"
-                    ),
-                    default_configuration=sarif.ReportingConfiguration(
-                        level="error"
-                    )
-                ),
-                sarif.ReportingDescriptor(
-                    id="lock-order",
-                    name="lock-order",
-                    short_description=sarif.MultiformatMessageString(
-                        text="Placeholder"
-                    ),
-                    full_description=sarif.MultiformatMessageString(
-                        text="Placeholder"
-                    ),
-                    default_configuration=sarif.ReportingConfiguration(
-                        level="error"
-                    )
-                ),
-                sarif.ReportingDescriptor(
-                    id="nan",
-                    name="nan",
-                    short_description=sarif.MultiformatMessageString(
-                        text="Placeholder"
-                    ),
-                    full_description=sarif.MultiformatMessageString(
-                        text="Placeholder"
-                    ),
-                    default_configuration=sarif.ReportingConfiguration(
-                        level="error"
-                    )
-                ),
-                sarif.ReportingDescriptor(
-                    id="overflow",
-                    name="overflow",
-                    short_description=sarif.MultiformatMessageString(
-                        text="Placeholder"
-                    ),
-                    full_description=sarif.MultiformatMessageString(
-                        text="Placeholder"
-                    ),
-                    default_configuration=sarif.ReportingConfiguration(
-                        level="error"
-                    )
-                ),
-                sarif.ReportingDescriptor(
-                    id="pointer",
-                    name="pointer",
-                    short_description=sarif.MultiformatMessageString(
-                        text="Placeholder"
-                    ),
-                    full_description=sarif.MultiformatMessageString(
-                        text="Placeholder"
-                    ),
-                    default_configuration=sarif.ReportingConfiguration(
-                        level="error"
-                    )
-                ),
-                sarif.ReportingDescriptor(
-                    id="struct-fields",
-                    name="struct-fields",
-                    short_description=sarif.MultiformatMessageString(
-                        text="Placeholder"
-                    ),
-                    full_description=sarif.MultiformatMessageString(
-                        text="Placeholder"
-                    ),
-                    default_configuration=sarif.ReportingConfiguration(
-                        level="error"
-                    )
-                ),
-                sarif.ReportingDescriptor(
-                    id="ub-shift",
-                    name="ub-shift",
-                    short_description=sarif.MultiformatMessageString(
-                        text="Placeholder"
-                    ),
-                    full_description=sarif.MultiformatMessageString(
-                        text="Placeholder"
-                    ),
-                    default_configuration=sarif.ReportingConfiguration(
-                        level="error"
-                    )
-                ),
-                sarif.ReportingDescriptor(
-                    id="unlimited-scanf",
-                    name="unlimited-scanf",
-                    short_description=sarif.MultiformatMessageString(
-                        text="Placeholder"
-                    ),
-                    full_description=sarif.MultiformatMessageString(
-                        text="Placeholder"
-                    ),
-                    default_configuration=sarif.ReportingConfiguration(
-                        level="error"
-                    )
-                ),
-                sarif.ReportingDescriptor(
-                    id="unsigned-overflow",
-                    name="unsigned-overflow",
-                    short_description=sarif.MultiformatMessageString(
-                        text="Placeholder"
-                    ),
-                    full_description=sarif.MultiformatMessageString(
-                        text="Placeholder"
-                    ),
-                    default_configuration=sarif.ReportingConfiguration(
-                        level="error"
-                    )
-                ),
-                sarif.ReportingDescriptor(
-                    id="vla-size",
-                    name="vla-size",
-                    short_description=sarif.MultiformatMessageString(
-                        text="Placeholder"
-                    ),
-                    full_description=sarif.MultiformatMessageString(
-                        text="Placeholder"
-                    ),
-                    default_configuration=sarif.ReportingConfiguration(
-                        level="error"
-                    )
-                )
-
-            ]
+            rules= load_json_rules("rules.json")
         )
     )
 
