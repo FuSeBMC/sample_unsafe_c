@@ -6,13 +6,19 @@ import uuid
 from datetime import datetime
 import sarif_om as sarif
 
+
+def snake_to_camel(snake_str):
+    components = snake_str.split('_')
+    return components[0] + ''.join(x.title() for x in components[1:])
+
 def to_dict(obj):
     if isinstance(obj, list):
         return [to_dict(v) for v in obj]
     elif hasattr(obj, "__dict__"):
-        return {k: to_dict(v) for k, v in obj.__dict__.items() if v is not None}
+        return {snake_to_camel(k): to_dict(v) for k, v in obj.__dict__.items() if v is not None}
     else:
         return obj
+
 
 
 
@@ -392,9 +398,6 @@ def build_sarif(data):
 
     return sarif_log
 
-
-
-
 def main():
     parser = argparse.ArgumentParser(description="Process GraphML files and convert them to SARIF.")
     parser.add_argument("directory", help="Directory containing GraphML files")
@@ -405,12 +408,10 @@ def main():
 
     for graphml_file in graphml_files:
         file_path = os.path.join(args.directory, graphml_file)
-        print(f"Processing file: {file_path}")
         parsed_graphml = {
             "data" : parse_graphml_file(file_path),
             "type" : graphml_file[:-8] # remove ".graphml"
         }
-        print(parsed_graphml)
         graphml_data.append(parsed_graphml)
 
     sarif_data = build_sarif(graphml_data)
