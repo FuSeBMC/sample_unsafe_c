@@ -120,6 +120,10 @@ def build_sarif(data,rules):
                         sarif.Location(
                             physical_location=sarif.PhysicalLocation(
                                 artifact_location=sarif.ArtifactLocation(
+                                    print("==============================================")
+                                    print(os.path.sep.join(graphml["data"]["file_name"].split(os.path.sep)[1:]))
+                                    print(graphml["data"]["file_name"].split(os.path.sep))
+                                    print("==============================================")
                                     uri= os.path.sep.join(graphml["data"]["file_name"].split(os.path.sep)[1:]) #this is removing the top level path of the uri
                                     # from the graphml file, this is required as running in the docker image causes the directory to be workspace/.../file.c
                                     # when github expects ./file.c
