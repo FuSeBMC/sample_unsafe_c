@@ -113,6 +113,7 @@ def build_sarif(data,rules):
             for line in graphml["data"]["violations"]:
                 fusebmc_results.append(sarif.Result(
                     rule_id=graphml["type"],
+                    level="error",
                     message=sarif.Message(
                         text="A vulnerability was found."
                     ),
