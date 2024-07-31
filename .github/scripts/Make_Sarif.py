@@ -109,8 +109,8 @@ def build_sarif(data,rules):
 
     fusebmc_results = []
     print("==============================================")
-    print(os.path.sep.join(graphml["data"]["file_name"].split(os.path.sep)[1:]))
-    print(graphml["data"]["file_name"].split(os.path.sep))
+    print(os.path.sep.join(data[0]["data"]["file_name"].split(os.path.sep)[1:]))
+    print(data[0]["data"]["file_name"].split(os.path.sep))
     print("==============================================")
     for graphml in data:
         if not graphml["type"].startswith("veri") and graphml["data"]["is_violation"]:
