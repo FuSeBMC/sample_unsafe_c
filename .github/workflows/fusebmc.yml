@@ -99,9 +99,6 @@ jobs:
             python3 .github/scripts/Make_Sarif.py $output_dir/fusebmc_instrument_output .github/scripts/rules.json
           fi
         done
-        echo "SARIF files found in the current directory:"
-        find . -name '*.sarif' -type f -print
-        find . -name '*.sarif' -exec mv {} ${{ github.workspace }}/sarif_output/ \;
         echo "vulnerabilities_found=$vulnerabilities_found" >> $GITHUB_OUTPUT
         find .
 
