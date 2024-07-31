@@ -1,0 +1,114 @@
+[
+    {
+        "id": "align",
+        "name": "align",
+        "short_description": "Placeholder",
+        "full_description": "Placeholder",
+        "level": "error"
+    },
+    {
+        "id": "assertions",
+        "name": "assertions",
+        "short_description": "Placeholder",
+        "full_description": "Placeholder",
+        "level": "error"
+    },
+    {
+        "id": "atomicity",
+        "name": "atomicity",
+        "short_description": "Placeholder",
+        "full_description": "Placeholder",
+        "level": "error"
+    },
+    {
+        "id": "bounds",
+        "name": "bounds",
+        "short_description": "Placeholder",
+        "full_description": "Placeholder",
+        "level": "error"
+    },
+    {
+        "id": "data-races",
+        "name": "data-races",
+        "short_description": "Placeholder",
+        "full_description": "Placeholder",
+        "level": "error"
+    },
+    {
+        "id": "deadlock",
+        "name": "deadlock",
+        "short_description": "Placeholder",
+        "full_description": "Placeholder",
+        "level": "error"
+    },
+    {
+        "id": "div-by-zero",
+        "name": "div-by-zero",
+        "short_description": "Placeholder",
+        "full_description": "Placeholder",
+        "level": "error"
+    },
+    {
+        "id": "lock-order",
+        "name": "lock-order",
+        "short_description": "Placeholder",
+        "full_description": "Placeholder",
+        "level": "error"
+    },
+    {
+        "id": "nan",
+        "name": "nan",
+        "short_description": "Placeholder",
+        "full_description": "Placeholder",
+        "level": "error"
+    },
+    {
+        "id": "overflow",
+        "name": "overflow",
+        "short_description": "Placeholder",
+        "full_description": "Placeholder",
+        "level": "error"
+    },
+    {
+        "id": "pointer",
+        "name": "pointer",
+        "short_description": "Placeholder",
+        "full_description": "Placeholder",
+        "level": "error"
+    },
+    {
+        "id": "struct-fields",
+        "name": "struct-fields",
+        "short_description": "Placeholder",
+        "full_description": "Placeholder",
+        "level": "error"
+    },
+    {
+        "id": "ub-shift",
+        "name": "ub-shift",
+        "short_description": "Placeholder",
+        "full_description": "Placeholder",
+        "level": "error"
+    },
+    {
+        "id": "unlimited-scanf",
+        "name": "unlimited-scanf",
+        "short_description": "Placeholder",
+        "full_description": "Placeholder",
+        "level": "error"
+    },
+    {
+        "id": "unsigned-overflow",
+        "name": "unsigned-overflow",
+        "short_description": "Placeholder",
+        "full_description": "Placeholder",
+        "level": "error"
+    },
+    {
+        "id": "vla-size",
+        "name": "vla-size",
+        "short_description": "Placeholder",
+        "full_description": "Placeholder",
+        "level": "error"
+    }
+]

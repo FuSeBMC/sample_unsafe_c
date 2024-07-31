@@ -2,6 +2,7 @@ name: FuSeBMC Analysis
 on:
   pull_request:
   workflow_dispatch:
+  push:
 
 jobs:
   build:
@@ -21,10 +22,9 @@ jobs:
       with:
         python-version: '3.x'
 
-    - name: Install scripts dependencies
+    - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip
-        pip install sarif_om
+        pip install -r .github/scripts/Requirements.txt
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v1
@@ -96,14 +96,27 @@ jobs:
                 fi
               fi
             done
-
-            python3 .github/scripts/Make_Sarif.py $output_dir/fusebmc_instrument_output >> "${file_name}.sarif"
+            python3 .github/scripts/Make_Sarif.py $output_dir/fusebmc_instrument_output .github/scripts/rules.json
           fi
         done
         echo "SARIF files found in the current directory:"
         find . -name '*.sarif' -type f -print
         find . -name '*.sarif' -exec mv {} ${{ github.workspace }}/sarif_output/ \;
         echo "vulnerabilities_found=$vulnerabilities_found" >> $GITHUB_OUTPUT
+        find .
+
+    - name: Find SARIF files
+      id: find-sarif
+      run: |
+        sarif_files=$(find ${{ github.workspace }}/fusebmc_output -name '*.sarif' -print0 | tr '\0' '\n')
+        echo "Found SARIF files: $sarif_files"
+        echo "sarif_files=$sarif_files" >> $GITHUB_ENV
+
+
+    - name: Upload SARIF results
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: ${{ env.sarif_files }}
 
     - name: Upload results
       if: always()
