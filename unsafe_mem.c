@@ -9,7 +9,7 @@ void demonstrateVulnerabilities() {
         return;
     }
 
-    *data1 = 420;
+    *data1 = 42;
     printf("Data1 value: %d\n", *data1);
 
     free(data1);
