@@ -88,7 +88,9 @@ def parse_graphml_file(file_path):
         
         startline_elem = edge.find('.//graphml:data[@key="startline"]', namespaces)
         if startline_elem is not None:
-            data['violations'].append(int(startline_elem.text)) 
+            data['violations'].append(max(int(startline_elem.text),1)) # the use of max() here is not ideal
+            # I have done this as FuSeBMC sometimes detects vulnerabilites on line zero and SARIF requires 
+            # all line numbers >= 1. 
     return data
 
 
