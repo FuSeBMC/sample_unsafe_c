@@ -9,7 +9,7 @@ int main (int argc, char *argv[]) {
     for (int i = 0; i < num; i++) {
         buffer[i] = 'X';
     }
-    printf("Buffer contents are: %s\n", buffer);
+    printf("Buffer contents are as follows: %s\n", buffer);
 
     return 0;
 }
