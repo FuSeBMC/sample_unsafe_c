@@ -8,8 +8,8 @@ void demonstrateVulnerabilities() {
         printf("Memory allocation failed\n");
         return;
     }
-z
-    *data1 = 42;
+
+    *data1 = 43;
     printf("Data1 value: %d\n", *data1);
 
     free(data1);

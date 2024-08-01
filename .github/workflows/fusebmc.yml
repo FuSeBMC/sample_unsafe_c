@@ -74,8 +74,8 @@ jobs:
             output=$(docker run \
               --name fusebmc_container \
               -v ${{ github.workspace }}:/workspace \
-              ghcr.io/fusebmc/fusebmc-ai:run-ESBMC-individual-property \
-              --ESBMC_Multirun --verification -a 64 -s incr /workspace/$file)
+              ghcr.io/fusebmc/fusebmc-ai:run-ESBMC-individual-property \ # WARNING will need to be changed when docker is getting built from the main branch
+              --ESBMC_Multirun --verification -a 64 /workspace/$file)
            
             # Copy the output from the container to the workspace
             docker cp fusebmc_container:/fusebmc_output ${{ github.workspace }}/fusebmc_output
