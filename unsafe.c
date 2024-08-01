@@ -7,7 +7,7 @@ int main (int argc, char *argv[]) {
     int num = atoi(argv[1]);
 
     for (int i = 0; i < num; i++) {
-        buffer[i] = 'X';
+        buffer[i] = 'Y';
     }
     printf("Buffer contents are: %s\n", buffer);
 
