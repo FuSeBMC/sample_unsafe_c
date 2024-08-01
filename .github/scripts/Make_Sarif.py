@@ -98,12 +98,15 @@ def build_sarif(data,rules):
         runs=[]
     )
 
+    rules_json = load_json_rules(rules)
+    rules_dict = rules_dict = {rule["id"]: rule for rule in rules_json}
+
     tool = sarif.Tool(
         driver=sarif.ToolComponent(
             name="FuSeBMC", # hardcoded tool info, improve this later
             version="AI-dev",
             information_uri="https://github.com/kaled-alshmrany/FuSeBMC",
-            rules= load_json_rules(rules)
+            rules=rules_json
         )
     )
 
@@ -115,7 +118,7 @@ def build_sarif(data,rules):
                     rule_id=graphml["type"],
                     level="error",
                     message=sarif.Message(
-                        text="A vulnerability was found."
+                        text="A vulnerability was found: " + rules_dict[graphml["type"]].short_description
                     ),
                     locations=[
                         sarif.Location(
