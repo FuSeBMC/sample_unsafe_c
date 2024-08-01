@@ -97,6 +97,7 @@ jobs:
                 fi
               fi
             done
+            find .
             python3 .github/scripts/Make_Sarif.py $output_dir/fusebmc_instrument_output .github/scripts/rules.json
           fi
         done
