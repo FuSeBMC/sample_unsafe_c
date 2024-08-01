@@ -99,7 +99,6 @@ def build_sarif(data,rules):
     )
 
     rules_json = load_json_rules(rules)
-    rules_dict = rules_dict = {rule["id"]: rule for rule in rules_json}
 
     tool = sarif.Tool(
         driver=sarif.ToolComponent(
@@ -113,12 +112,18 @@ def build_sarif(data,rules):
     fusebmc_results = []
     for graphml in data:
         if not graphml["type"].startswith("veri") and graphml["data"]["is_violation"]:
+            description = ""
+            for rule in rules_json:
+                if graphml["type"].startswith(rule.id):
+                    description = rule.short_description.text
+                            
             for line in graphml["data"]["violations"]:
                 fusebmc_results.append(sarif.Result(
                     rule_id=graphml["type"],
                     level="error",
                     message=sarif.Message(
-                        text="A vulnerability was found: " + rules_dict[graphml["type"]].short_description
+
+                        text="A vulnerability was found: " + description
                     ),
                     locations=[
                         sarif.Location(
